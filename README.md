@@ -22,6 +22,20 @@ This README describes the intended product architecture and design principles. N
 
 ---
 
+## Why This Exists
+
+Most independent coaches and small practices run their workflow across spreadsheets, PDFs, chat threads, and memory. That creates three problems:
+
+1. **Client drop-off at intake.** Long, spreadsheet-based assessments are intimidating and easy to abandon.
+
+2. **High manual effort for plan creation.** Translating intake data into a personalized coaching plan takes 8-10+ hours per client.
+
+3. **Review fatigue at scale.** Weekly tracking and feedback are valuable, but become operationally expensive as the client base grows.
+
+Coach OS preserves clinical depth while reducing administrative drag. It does not replace the coach. It gives the coach better infrastructure.
+
+---
+
 ## System Overview
 
 ```mermaid
@@ -42,21 +56,10 @@ flowchart TD
 
 ---
 
-## Why This Exists
-
-Most independent coaches and small practices run their workflow across spreadsheets, PDFs, chat threads, and memory. That creates three problems:
-
-1. **Client drop-off at intake.** Long, spreadsheet-based assessments are intimidating and easy to abandon.
-2. **High manual effort for plan creation.** Translating intake data into a personalized coaching plan takes 8-10+ hours per client.
-3. **Review fatigue at scale.** Weekly tracking and feedback are valuable, but become operationally expensive as the client base grows.
-
-Coach OS preserves clinical depth while reducing administrative drag. It does not replace the coach. It gives the coach better infrastructure.
-
----
-
 ## User Roles
 
 ### Coach
+
 - Reviews intake data and clinical summary
 - Makes all clinical decisions (calorie targets, macros, approach, referrals)
 - Edits AI-drafted plans before delivery
@@ -64,12 +67,14 @@ Coach OS preserves clinical depth while reducing administrative drag. It does no
 - Configures dashboard mode per client based on clinical judgment
 
 ### Client
+
 - Completes adaptive intake assessment
 - Logs daily check-ins (< 2 minutes, mobile-first)
 - Views personalized plan and weekly feedback
 - Sees progress through a coach-configured dashboard
 
 ### System
+
 - Structures and stores intake data
 - Generates clinical summaries with red-flag detection
 - Drafts plans and weekly reviews from structured data
@@ -83,18 +88,23 @@ Coach OS preserves clinical depth while reducing administrative drag. It does no
 When self-improvement becomes a KPI dashboard, wellness stops feeling like care and starts feeling like surveillance. Coach OS is designed to avoid that trap.
 
 ### 1. The client experience should feel human
+
 Daily check-ins should feel like texting your coach, not submitting a performance report. No red/green adherence color coding. No guilt-inducing banners. The system tracks data quietly in the background — the client-facing experience should feel warm, not clinical.
 
 ### 2. The coach stays in control
+
 AI can summarize, draft, and organize. The coach makes clinical decisions and approves every client-facing output. The client should always feel they're hearing from their coach, not from software.
 
 ### 3. Progress is broader than metrics
+
 Behavioral wins, consistency, and emotional context matter alongside weight, macros, and adherence. The plan already embodies this — introductory remarks talk about resilience, self-forgiveness, and realistic expectations. The app should match that tone.
 
 ### 4. The system should know when not to intervene
+
 A missed check-in is not a failure — it's a data point. If a client goes quiet, the system flags it for the coach rather than bombarding the client with reminders. The coach decides how to re-engage, not the algorithm.
 
 ### 5. Dashboard intensity is a clinical choice
+
 Some clients benefit from data-heavy views — seeing their weight trend and macro adherence motivates them. Others would be harmed by it, especially clients with addictive or obsessive tendencies (which the intake explicitly screens for). The coach choosing minimal vs. standard vs. data-heavy mode per client is not a UX preference — it is a clinical judgment call about what is psychologically safe for that specific person.
 
 ---
@@ -102,9 +112,11 @@ Some clients benefit from data-heavy views — seeing their weight trend and mac
 ## Product Architecture
 
 ### 1. Intake System
+
 A continuous, multi-section intake flow with conditional branching, save-and-resume, and voice input for narrative responses. Branching reduces visible questions by ~30-40% for clients without certain conditions, while preserving full clinical depth for complex cases.
 
 ### 2. Plan Generation System
+
 Combines structured intake data, coach decisions, and AI-assisted drafting to produce personalized plans without removing coach oversight.
 
 1. Auto-generated intake summary with red-flag extraction
@@ -114,6 +126,7 @@ Combines structured intake data, coach decisions, and AI-assisted drafting to pr
 5. PDF export and client delivery
 
 ### 3. Tracking and Weekly Review System
+
 Each client gets a plan-specific tracker and a lightweight daily check-in flow. Weekly reviews synthesize the client's actual records and generate coach-editable feedback with citations to underlying check-in data. Every claim in the weekly synthesis is traceable to specific dates, fields, and values.
 
 ---
@@ -177,6 +190,8 @@ This repository is under active development. The README reflects the intended pr
 ## Vision
 
 Coach OS is not trying to automate care. It is trying to give coaches better infrastructure so they can deliver more thoughtful care, more consistently, with less administrative drag.
+
+---
 
 ## License
 
