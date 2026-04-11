@@ -57,7 +57,7 @@ node scripts/seed.mjs  # Seed coach + test client accounts
 ```
 
 ## Test Accounts
-- Coach: jolene@coachOS.dev / coach123
+- Coach: coach@test.dev / coach123
 - Client: client@test.dev / client123
 
 ## Database
