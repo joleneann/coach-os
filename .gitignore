@@ -47,11 +47,13 @@ prisma/*.db-journal
 .env.local
 .env.production
 
-# Client data — NEVER commit
+# Client data and private documents — NEVER commit
 *.xlsx
 *.pdf
+*.docx
 Old Method/
 sample_plan_text.txt
+scripts/create-learning-guide.js
 
 # typescript
 *.tsbuildinfo
