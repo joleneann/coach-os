@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { intakeSections } from "@/lib/intake-schema";
 import Link from "next/link";
+import CollapsibleSection from "@/components/CollapsibleSection";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function ClientDetailPage({
   params,
@@ -38,7 +40,6 @@ export default async function ClientDetailPage({
     }
   }
 
-  // Calculate BMI if we have height and weight
   const height = responseMap?.basic_info?.height as string | undefined;
   const weight = responseMap?.basic_info?.weight as string | undefined;
   const heightM = height ? parseFloat(height) / 100 : null;
@@ -46,7 +47,6 @@ export default async function ClientDetailPage({
   const bmi =
     heightM && weightKg ? (weightKg / (heightM * heightM)).toFixed(1) : null;
 
-  // Waist-hip ratio
   const waist = responseMap?.basic_info?.waist as string | undefined;
   const hip = responseMap?.basic_info?.hip as string | undefined;
   const whr =
@@ -69,22 +69,24 @@ export default async function ClientDetailPage({
               {client.name}
             </h1>
           </div>
-          <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              submission?.status === "COMPLETE"
-                ? "bg-green-50 text-green-700"
-                : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            {submission?.status === "COMPLETE"
-              ? "Intake Complete"
-              : "Intake In Progress"}
-          </span>
+          <div className="flex items-center gap-4">
+            <span
+              className={`text-xs px-2 py-1 rounded-full ${
+                submission?.status === "COMPLETE"
+                  ? "bg-green-50 text-green-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {submission?.status === "COMPLETE"
+                ? "Intake Complete"
+                : "Intake In Progress"}
+            </span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Quick stats */}
         {(bmi || whr) && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             {weightKg && (
@@ -118,7 +120,6 @@ export default async function ClientDetailPage({
           </div>
         )}
 
-        {/* Intake sections */}
         {!submission ? (
           <div className="text-center py-16">
             <p className="text-stone-500">
@@ -126,36 +127,21 @@ export default async function ClientDetailPage({
             </p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-3">
             {intakeSections.map((section) => {
               const sectionData = responseMap[section.key];
-              if (!sectionData || Object.keys(sectionData).length === 0) {
-                return (
-                  <div
-                    key={section.key}
-                    className="bg-white rounded-lg border border-stone-200 p-6"
-                  >
-                    <h2 className="text-base font-semibold text-stone-900 mb-1">
-                      {section.title}
-                    </h2>
-                    <p className="text-sm text-stone-400">
-                      Not yet completed
-                    </p>
-                  </div>
-                );
-              }
+              const hasData =
+                !!sectionData && Object.keys(sectionData).length > 0;
 
               return (
-                <div
+                <CollapsibleSection
                   key={section.key}
-                  className="bg-white rounded-lg border border-stone-200 p-6"
+                  title={section.title}
+                  hasData={hasData}
                 >
-                  <h2 className="text-base font-semibold text-stone-900 mb-4">
-                    {section.title}
-                  </h2>
                   <dl className="space-y-3">
                     {section.questions.map((q) => {
-                      const val = sectionData[q.key];
+                      const val = sectionData?.[q.key];
                       if (val === undefined || val === null || val === "")
                         return null;
 
@@ -163,13 +149,19 @@ export default async function ClientDetailPage({
                         <div key={q.key}>
                           <dt className="text-xs text-stone-500">{q.label}</dt>
                           <dd className="text-sm text-stone-900 mt-0.5 whitespace-pre-wrap">
-                            {Array.isArray(val) ? val.join(", ") : String(val)}
+                            {Array.isArray(val)
+                              ? val.join(", ")
+                              : typeof val === "boolean"
+                                ? val
+                                  ? "Yes"
+                                  : "No"
+                                : String(val)}
                           </dd>
                         </div>
                       );
                     })}
                   </dl>
-                </div>
+                </CollapsibleSection>
               );
             })}
           </div>

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function CoachDashboard() {
   const session = await auth();
@@ -24,7 +25,10 @@ export default async function CoachDashboard() {
       <header className="bg-white border-b border-stone-200">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-stone-900">Coach OS</h1>
-          <p className="text-sm text-stone-500">{session.user.name}</p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-stone-500">{session.user.name}</p>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
