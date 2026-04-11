@@ -58,7 +58,7 @@ node scripts/seed.mjs  # Seed coach + test client accounts
 
 ## Test Accounts
 - Coach: jolene@coachOS.dev / coach123
-- Client: arjun@test.dev / client123
+- Client: client@test.dev / client123
 
 ## Database
 Supabase project: Coach OS
