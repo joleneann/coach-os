@@ -54,6 +54,13 @@ prisma/*.db-journal
 Old Method/
 sample_plan_text.txt
 scripts/create-learning-guide.js
+scripts/create-product-spec.js
+
+# Private IP — clinical content, prompts, templates
+# These files contain proprietary coaching methodology
+src/lib/intake-schema.private.ts
+src/lib/plan-prompts.private.ts
+src/lib/resources.private.ts
 
 # typescript
 *.tsbuildinfo
