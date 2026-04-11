@@ -47,6 +47,12 @@ prisma/*.db-journal
 .env.local
 .env.production
 
+# Client data — NEVER commit
+*.xlsx
+*.pdf
+Old Method/
+sample_plan_text.txt
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

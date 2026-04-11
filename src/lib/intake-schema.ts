@@ -145,13 +145,47 @@ export const intakeSections: IntakeSection[] = [
     ],
   },
 
-  // ─── Section 3: Current Habits ────────────────────────────
+  // ─── Section 3: Habits & Lifestyle ────────────────────────
   {
     key: "current_habits",
-    title: "Current Habits",
+    title: "Habits & Lifestyle",
     description:
-      "Tell us about your current exercise and lifestyle habits — both past and present. This helps us understand where you're starting from.",
+      "Tell us about your exercise history, current habits, food preferences, and daily routine. This section flows from past to present so we can understand where you've been and where you are now.",
     questions: [
+      // ── Exercise History (past) ──
+      {
+        key: "weight_history",
+        label: "Approximate bodyweight at different life stages",
+        type: "textarea",
+        placeholder:
+          "e.g., High school: 65kg, College: 75kg, Current: 92kg",
+        voiceEnabled: true,
+      },
+      {
+        key: "played_sports",
+        label: "Have you played any sports?",
+        type: "yesno",
+      },
+      {
+        key: "sports_history",
+        label: "Which sports, and for how long?",
+        type: "textarea",
+        condition: { questionKey: "played_sports", value: true },
+      },
+      {
+        key: "gym_member",
+        label: "Have you been a gym member before?",
+        type: "yesno",
+      },
+      {
+        key: "gym_experience",
+        label: "What was your gym experience like?",
+        type: "textarea",
+        condition: { questionKey: "gym_member", value: true },
+        voiceEnabled: true,
+      },
+
+      // ── Current Exercise (present) ──
       {
         key: "currently_exercise",
         label: "Do you currently exercise?",
@@ -183,31 +217,8 @@ export const intakeSections: IntakeSection[] = [
         type: "text",
         condition: { questionKey: "currently_exercise", value: true },
       },
-      {
-        key: "gym_member",
-        label: "Have you been a gym member before?",
-        type: "yesno",
-      },
-      {
-        key: "gym_experience",
-        label: "What was your gym experience like?",
-        type: "textarea",
-        condition: { questionKey: "gym_member", value: true },
-        voiceEnabled: true,
-      },
-      {
-        key: "weight_history",
-        label: "Approximate bodyweight at different life stages",
-        type: "textarea",
-        placeholder:
-          "e.g., High school: 65kg, College: 75kg, Current: 92kg",
-        voiceEnabled: true,
-      },
-      {
-        key: "sports_history",
-        label: "Have you played any sports? If yes, which ones?",
-        type: "textarea",
-      },
+
+      // ── Daily Activity ──
       {
         key: "steps_daily",
         label: "Approximate daily step count",
@@ -219,6 +230,8 @@ export const intakeSections: IntakeSection[] = [
         label: "Hours spent sitting per day",
         type: "number",
       },
+
+      // ── Food & Kitchen ──
       {
         key: "cooking_ability",
         label: "Do you cook your own meals?",
@@ -237,6 +250,25 @@ export const intakeSections: IntakeSection[] = [
         type: "number",
       },
       {
+        key: "foods_i_like",
+        label:
+          "Foods, snacks, fruits, and recipes you enjoy and would eat regularly",
+        type: "textarea",
+        voiceEnabled: true,
+        helperText:
+          "This becomes your ready reckoner — a reference list for grocery shopping and meal ideas",
+      },
+      {
+        key: "foods_i_dislike",
+        label: "Foods you strongly dislike or won't eat",
+        type: "textarea",
+      },
+      {
+        key: "allergies",
+        label: "Any food allergies or intolerances?",
+        type: "textarea",
+      },
+      {
         key: "water_intake",
         label: "Approximate daily water intake",
         type: "select",
@@ -248,6 +280,8 @@ export const intakeSections: IntakeSection[] = [
           "Not sure",
         ],
       },
+
+      // ── Substances ──
       {
         key: "alcohol",
         label: "Do you consume alcohol?",
@@ -272,9 +306,9 @@ export const intakeSections: IntakeSection[] = [
   // ─── Section 4: Food Record ───────────────────────────────
   {
     key: "food_record",
-    title: "Food Record",
+    title: "4-Day Food Diary",
     description:
-      "Tell us what you typically eat over 4 days (2 weekdays + Saturday + Sunday). Include approximate quantities, where you ate, who you were with, your mood, and how hungry you were. You can use voice input here.",
+      "Tell us what you typically eat over 4 days (2 weekdays + Saturday + Sunday). For each meal, include approximate quantities, where you ate, who you were with, your mood, and how hungry you were. Voice input is available here.",
     questions: [
       {
         key: "day1_label",
@@ -288,7 +322,7 @@ export const intakeSections: IntakeSection[] = [
         label: "Day 1 — What did you eat throughout the day?",
         type: "textarea",
         placeholder:
-          "For each meal, mention: time, food (with quantities), where you ate, who with, your mood, and how hungry you were",
+          "For each meal: time, food (with quantities), where, who with, mood, hunger level",
         required: true,
         voiceEnabled: true,
       },
@@ -332,32 +366,13 @@ export const intakeSections: IntakeSection[] = [
         required: true,
         voiceEnabled: true,
       },
-      {
-        key: "foods_i_like",
-        label:
-          "List foods, snacks, fruits, and recipes you enjoy and would eat regularly",
-        type: "textarea",
-        voiceEnabled: true,
-        helperText:
-          "This becomes your ready reckoner — a reference list for grocery shopping and meal ideas",
-      },
-      {
-        key: "foods_i_dislike",
-        label: "Foods you strongly dislike or won't eat",
-        type: "textarea",
-      },
-      {
-        key: "allergies",
-        label: "Any food allergies or intolerances?",
-        type: "textarea",
-      },
     ],
   },
 
-  // ─── Section 5: History & Genetics ────────────────────────
+  // ─── Section 5: Medical History & Genetics ────────────────
   {
     key: "history_genetics",
-    title: "History & Genetics",
+    title: "Medical History & Genetics",
     description:
       "Family health history and your medical background help us identify risk factors and tailor recommendations safely.",
     questions: [
@@ -378,34 +393,64 @@ export const intakeSections: IntakeSection[] = [
         ],
       },
       {
-        key: "personal_conditions",
+        key: "has_conditions",
         label: "Have you been diagnosed with any medical conditions?",
+        type: "yesno",
+      },
+      {
+        key: "personal_conditions",
+        label: "Please describe your conditions",
         type: "textarea",
+        condition: { questionKey: "has_conditions", value: true },
         voiceEnabled: true,
+      },
+      {
+        key: "has_medications",
+        label: "Are you currently taking any medications?",
+        type: "yesno",
       },
       {
         key: "medications",
-        label: "Are you currently taking any medications?",
+        label: "List medication names and dosages",
         type: "textarea",
-        placeholder: "List medication names and dosages if possible",
+        placeholder: "e.g., Metformin 500mg twice daily",
+        condition: { questionKey: "has_medications", value: true },
+      },
+      {
+        key: "has_supplements",
+        label: "Are you currently taking any supplements?",
+        type: "yesno",
       },
       {
         key: "supplements_current",
-        label: "Are you currently taking any supplements?",
+        label: "Which supplements and dosages?",
         type: "textarea",
+        condition: { questionKey: "has_supplements", value: true },
+      },
+      {
+        key: "has_injuries",
+        label: "Any past or current injuries?",
+        type: "yesno",
       },
       {
         key: "injuries",
-        label: "Any past or current injuries?",
+        label: "Describe your injuries",
         type: "textarea",
         placeholder:
           "e.g., Shoulder ligament tear (2019), knee pain when squatting",
+        condition: { questionKey: "has_injuries", value: true },
         voiceEnabled: true,
       },
       {
-        key: "surgeries",
+        key: "has_surgeries",
         label: "Any surgeries?",
+        type: "yesno",
+      },
+      {
+        key: "surgeries",
+        label: "Describe your surgeries",
         type: "textarea",
+        condition: { questionKey: "has_surgeries", value: true },
       },
     ],
   },
@@ -550,9 +595,15 @@ export const intakeSections: IntakeSection[] = [
         ],
       },
       {
+        key: "has_food_sensitivities",
+        label: "Are there specific foods that seem to upset your stomach?",
+        type: "yesno",
+      },
+      {
         key: "food_sensitivities",
-        label: "Any foods that seem to upset your stomach?",
+        label: "Which foods cause problems?",
         type: "textarea",
+        condition: { questionKey: "has_food_sensitivities", value: true },
       },
       {
         key: "gut_additional",
