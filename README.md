@@ -10,7 +10,7 @@ Coach OS replaces a fragile stack of Excel sheets, PDFs, WhatsApp threads, and m
 
 ## Current Status
 
-**All 8 build phases are complete.** The system is functional end-to-end: a client can complete intake, receive a personalized plan, check in daily, get weekly reviews from their coach, and track habit progress over time on a configurable dashboard.
+**All 8 build phases are complete and are in UX refinement.** The system is functional end-to-end: a client can complete intake, receive a personalized plan, check in daily, get weekly reviews from their coach, and track habit progress over time on a configurable dashboard.
 
 | Phase | Status | What |
 |-------|--------|------|
