@@ -20,5 +20,10 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Force Inter on all elements — override any Tailwind font-sans defaults */
+*, *::before, *::after {
   font-family: inherit;
 }
