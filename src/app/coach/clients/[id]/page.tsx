@@ -5,6 +5,10 @@ import { intakeSections } from "@/lib/intake-schema";
 import Link from "next/link";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import LogoutButton from "@/components/LogoutButton";
+import CheckInWeekView from "@/components/CheckInWeekView";
+import CoachReviewSection from "@/components/CoachReviewSection";
+import type { TrackerField } from "@/lib/tracker-template";
+import { getWeekStartDate } from "@/lib/weekly-review";
 
 export default async function ClientDetailPage({
   params,
@@ -39,6 +43,79 @@ export default async function ClientDetailPage({
       responseMap[r.sectionKey][r.questionKey] = r.value;
     }
   }
+
+  // Check for existing plans
+  const latestPlan = await prisma.plan.findFirst({
+    where: { clientId: id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Fetch tracker template + recent check-ins for the coach view
+  const trackerTemplate = await prisma.trackerTemplate.findFirst({
+    where: { clientId: id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  let recentCheckIns: { id: string; date: Date; responses: unknown }[] = [];
+  if (trackerTemplate) {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    recentCheckIns = await prisma.dailyCheckIn.findMany({
+      where: {
+        clientId: id,
+        date: {
+          gte: new Date(
+            sevenDaysAgo.toISOString().split("T")[0] + "T00:00:00.000Z"
+          ),
+        },
+      },
+      orderBy: { date: "desc" },
+      select: { id: true, date: true, responses: true },
+    });
+  }
+
+  // Fetch weekly review data
+  const currentWeekStart = getWeekStartDate();
+  const currentWeekStartDate = new Date(currentWeekStart + "T00:00:00.000Z");
+  const currentWeekEndDate = new Date(currentWeekStart + "T00:00:00.000Z");
+  currentWeekEndDate.setDate(currentWeekEndDate.getDate() + 6);
+
+  const currentReview = trackerTemplate
+    ? await prisma.weeklyReview.findUnique({
+        where: {
+          clientId_weekStartDate: {
+            clientId: id,
+            weekStartDate: currentWeekStartDate,
+          },
+        },
+      })
+    : null;
+
+  const pastReviews = trackerTemplate
+    ? await prisma.weeklyReview.findMany({
+        where: {
+          clientId: id,
+          weekStartDate: { lt: currentWeekStartDate },
+        },
+        select: { id: true, weekStartDate: true, status: true },
+        orderBy: { weekStartDate: "desc" },
+        take: 8,
+      })
+    : [];
+
+  // Check if there are check-ins this week
+  const thisWeekCheckIns = trackerTemplate
+    ? await prisma.dailyCheckIn.count({
+        where: {
+          clientId: id,
+          date: {
+            gte: currentWeekStartDate,
+            lte: new Date(currentWeekEndDate.toISOString().split("T")[0] + "T23:59:59.999Z"),
+          },
+        },
+      })
+    : 0;
 
   const height = responseMap?.basic_info?.height as string | undefined;
   const weight = responseMap?.basic_info?.weight as string | undefined;
@@ -87,6 +164,116 @@ export default async function ClientDetailPage({
       </header>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Plan Action Bar */}
+        {submission?.status === "COMPLETE" && (
+          <div className="mb-6 bg-white border border-stone-200 rounded-lg p-4 flex items-center justify-between">
+            {latestPlan ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium text-stone-900">
+                    Plan v{latestPlan.version}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    Status:{" "}
+                    <span
+                      className={
+                        latestPlan.status === "APPROVED"
+                          ? "text-green-700"
+                          : latestPlan.status === "COACH_REVIEW"
+                            ? "text-blue-700"
+                            : "text-amber-700"
+                      }
+                    >
+                      {latestPlan.status.replace("_", " ")}
+                    </span>
+                  </p>
+                </div>
+                <Link
+                  href={
+                    latestPlan.status === "DRAFT"
+                      ? `/coach/clients/${id}/plan`
+                      : `/coach/clients/${id}/plan/review`
+                  }
+                  className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg hover:bg-stone-800"
+                >
+                  {latestPlan.status === "DRAFT"
+                    ? "Continue Plan"
+                    : latestPlan.status === "COACH_REVIEW"
+                      ? "Review Plan"
+                      : "View Plan"}
+                </Link>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="text-sm font-medium text-stone-900">
+                    Intake complete. Ready to create a plan.
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    Review the intake data below, then create the plan.
+                  </p>
+                </div>
+                <Link
+                  href={`/coach/clients/${id}/plan`}
+                  className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg hover:bg-stone-800"
+                >
+                  Create Plan
+                </Link>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Recent Check-ins (only if tracker is set up) */}
+        {trackerTemplate && (
+          <div className="mb-6">
+            <CheckInWeekView
+              checkIns={recentCheckIns.map((ci) => ({
+                id: ci.id,
+                date: ci.date.toISOString(),
+                responses: ci.responses as Record<string, unknown>,
+              }))}
+              templateFields={
+                (trackerTemplate.fields as unknown as TrackerField[]) || []
+              }
+              dashboardMode={client.dashboardMode || "STANDARD"}
+            />
+          </div>
+        )}
+
+        {/* Weekly Review (only if tracker is set up) */}
+        {trackerTemplate && (
+          <div className="mb-6">
+            <CoachReviewSection
+              clientId={id}
+              currentWeekStart={currentWeekStart}
+              hasCheckInsThisWeek={thisWeekCheckIns > 0}
+              initialReview={
+                currentReview
+                  ? {
+                      id: currentReview.id,
+                      weekStartDate: currentReview.weekStartDate.toISOString().split("T")[0],
+                      status: currentReview.status,
+                      synthesisData: currentReview.synthesisData as {
+                        sections?: { title: string; content: string }[];
+                        generationNote?: string;
+                        generationError?: string;
+                      } | null,
+                      coachFeedback: currentReview.coachFeedback,
+                      approvedAt: currentReview.approvedAt?.toISOString() || null,
+                      deliveredAt: currentReview.deliveredAt?.toISOString() || null,
+                    }
+                  : null
+              }
+              pastReviews={pastReviews.map((pr) => ({
+                id: pr.id,
+                weekStartDate: pr.weekStartDate.toISOString().split("T")[0],
+                status: pr.status,
+              }))}
+            />
+          </div>
+        )}
+
         {(bmi || whr) && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             {weightKg && (
@@ -109,11 +296,11 @@ export default async function ClientDetailPage({
                 <p className="text-lg font-semibold text-stone-900">{whr}</p>
               </div>
             )}
-            {responseMap?.stress_sleep?.stress_level && (
+            {responseMap?.stress_sleep?.stress_level != null && (
               <div className="bg-white rounded-lg border border-stone-200 p-4">
                 <p className="text-xs text-stone-500">Stress Level</p>
                 <p className="text-lg font-semibold text-stone-900">
-                  {responseMap.stress_sleep.stress_level as string}/10
+                  {String(responseMap.stress_sleep.stress_level)}/10
                 </p>
               </div>
             )}

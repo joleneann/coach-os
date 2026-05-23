@@ -20,6 +20,8 @@ export interface IntakeQuestion {
   condition?: { questionKey: string; value: unknown };
   subQuestions?: IntakeQuestion[];
   helperText?: string;
+  /** If set, renders a metric/imperial toggle. Values are always stored in metric. */
+  unitToggle?: { metric: string; imperial: string };
 }
 
 export interface IntakeSection {
@@ -27,6 +29,8 @@ export interface IntakeSection {
   title: string;
   description: string;
   questions: IntakeQuestion[];
+  /** Shown inline when all visible questions in this section have been answered. */
+  completionMessage?: string;
 }
 
 // ─────────────────────────────────────────────────────────
