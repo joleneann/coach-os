@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coach OS — Architecture Diagram</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --stone-50: #fafaf9; --stone-100: #f5f5f4; --stone-200: #e7e5e4;
+    --stone-300: #d6d3d1; --stone-400: #a8a29e; --stone-500: #78716c;
+    --stone-600: #57534e; --stone-700: #44403c; --stone-800: #292524;
+    --stone-900: #1c1917;
+    --amber-100: #fef3c7; --amber-200: #fde68a; --amber-300: #fcd34d;
+    --amber-400: #fbbf24; --amber-500: #f59e0b; --amber-600: #d97706;
+    --amber-700: #b45309; --amber-800: #92400e;
+    --blue: #3B82F6; --blue-light: #DBEAFE; --blue-border: #93C5FD;
+    --purple: #8B5CF6; --purple-light: #EDE9FE; --purple-border: #C4B5FD;
+    --emerald: #10B981; --emerald-light: #D1FAE5; --emerald-border: #6EE7B7;
+    --amber: #F59E0B; --amber-light: #FEF3C7; --amber-border: #FCD34D;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--stone-100); color: var(--stone-800); overflow-x: auto; }
+
+  /* Header */
+  .header {
+    background: var(--stone-900);
+    color: white;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header .subtitle { color: var(--stone-400); font-size: 12px; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    padding: 12px 32px;
+    background: white;
+    border-bottom: 1px solid var(--stone-200);
+    position: sticky;
+    top: 58px;
+    z-index: 199;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .legend-title { font-size: 11px; color: var(--stone-400); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--stone-600); }
+  .legend-line { width: 24px; height: 3px; border-radius: 2px; }
+  .legend-line.blue { background: var(--blue); }
+  .legend-line.purple { background: var(--purple); }
+  .legend-line.emerald { background: var(--emerald); }
+  .legend-line.amber { background: var(--amber); }
+
+  /* Diagram container */
+  .diagram-wrap {
+    position: relative;
+    min-width: 1300px;
+    padding: 40px 32px 60px;
+  }
+
+  /* SVG overlay */
+  .svg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .svg-overlay path {
+    fill: none;
+    stroke-width: 2;
+    opacity: 0.18;
+    transition: opacity 0.2s, stroke-width 0.2s;
+  }
+  .svg-overlay path.highlighted {
+    opacity: 0.85;
+    stroke-width: 2.5;
+  }
+  .svg-overlay path.dimmed {
+    opacity: 0.05;
+  }
+
+  /* Swim lanes */
+  .lanes {
+    display: grid;
+    grid-template-columns: 200px 280px 200px 200px;
+    gap: 80px;
+    position: relative;
+    z-index: 5;
+  }
+
+  .lane {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .lane-header {
+    text-align: center;
+    padding: 14px 12px;
+    border-radius: 10px 10px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    position: sticky;
+    top: 100px;
+    z-index: 15;
+  }
+  .lane-header.intake { background: var(--blue-light); color: #1E40AF; border: 1px solid var(--blue-border); border-bottom: none; }
+  .lane-header.plan { background: var(--purple-light); color: #5B21B6; border: 1px solid var(--purple-border); border-bottom: none; }
+  .lane-header.tracker { background: var(--emerald-light); color: #065F46; border: 1px solid var(--emerald-border); border-bottom: none; }
+  .lane-header.review { background: var(--amber-light); color: var(--amber-800); border: 1px solid var(--amber-border); border-bottom: none; }
+
+  .lane-phase {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  .lane-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 0;
+  }
+
+  /* Blocks */
+  .block {
+    background: white;
+    border: 1.5px solid var(--stone-200);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--stone-700);
+    cursor: default;
+    transition: all 0.15s;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .block:hover {
+    border-color: var(--stone-400);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    z-index: 20;
+  }
+  .block.highlighted {
+    border-width: 2px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    z-index: 20;
+  }
+
+  .block.intake-block { border-left: 4px solid var(--blue); }
+  .block.intake-block.highlighted { border-color: var(--blue); background: var(--blue-light); }
+
+  .block.plan-block { border-left: 4px solid var(--purple); }
+  .block.plan-block.highlighted { border-color: var(--purple); background: var(--purple-light); }
+
+  .block.tracker-block { border-left: 4px solid var(--emerald); }
+  .block.tracker-block.highlighted { border-color: var(--emerald); background: var(--emerald-light); }
+
+  .block.review-block { border-left: 4px solid var(--amber); }
+  .block.review-block.highlighted { border-color: var(--amber); background: var(--amber-light); }
+
+  /* Decision/function blocks (special shape) */
+  .block.fn-block {
+    background: var(--stone-50);
+    border: 2px dashed var(--stone-300);
+    border-left: 4px solid var(--stone-500);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--stone-500);
+    text-align: center;
+  }
+
+  /* Sub-label */
+  .block-sub {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--stone-400);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Section dividers in plan lane */
+  .section-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--stone-400);
+    padding: 8px 0 4px;
+    margin-top: 4px;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    display: none;
+    position: fixed;
+    z-index: 300;
+    background: var(--stone-900);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    max-width: 280px;
+    line-height: 1.5;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .tooltip.visible { display: block; }
+  .tooltip strong { color: var(--amber-300); }
+
+  /* Feedback loop label */
+  .feedback-label {
+    position: absolute;
+    top: 20px;
+    right: 32px;
+    background: var(--amber-light);
+    border: 1px solid var(--amber-border);
+    color: var(--amber-800);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    z-index: 15;
+  }
+  .feedback-label span { font-weight: 400; font-size: 10px; color: var(--amber-700); }
+
+  /* Status chain inside lane header area */
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid var(--stone-200);
+    border-top: none;
+    font-size: 9px;
+    border-radius: 0 0 10px 10px;
+    margin-bottom: 6px;
+  }
+  .status-pill {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status-pill.on { background: var(--amber-100); color: var(--amber-700); }
+  .status-pill.off { background: var(--stone-100); color: var(--stone-400); }
+  .status-arr { color: var(--stone-300); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Coach OS</h1>
+    <div class="subtitle">System Architecture + Data Flow</div>
+  </div>
+  <div class="header-right">
+    <div class="subtitle">Hover any block to trace its connections</div>
+  </div>
+</div>
+
+<div class="legend">
+  <span class="legend-title">Data flows</span>
+  <div class="legend-item"><div class="legend-line blue"></div>Intake &rarr; Plan</div>
+  <div class="legend-item"><div class="legend-line purple"></div>Decisions &rarr; Tracker</div>
+  <div class="legend-item"><div class="legend-line emerald"></div>Check-ins &rarr; Review</div>
+  <div class="legend-item"><div class="legend-line amber"></div>Review &rarr; Plan (feedback)</div>
+</div>
+
+<div class="diagram-wrap" id="diagramWrap">
+  <svg class="svg-overlay" id="svgOverlay">
+    <defs>
+      <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3B82F6"/></marker>
+      <marker id="arrow-purple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#8B5CF6"/></marker>
+      <marker id="arrow-emerald" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#10B981"/></marker>
+      <marker id="arrow-amber" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#F59E0B"/></marker>
+    </defs>
+  </svg>
+
+  <div class="feedback-label">&#x21bb; Reassess feeds next plan revision <span>(continuous cycle)</span></div>
+
+  <div class="lanes">
+
+    <!-- ============ LANE 1: INTAKE ============ -->
+    <div class="lane">
+      <div class="lane-header intake">
+        Intake System
+        <div class="lane-phase">Phase 1</div>
+      </div>
+      <div class="status-row">
+        <span class="status-pill on">IN_PROGRESS</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">COMPLETE</span>
+      </div>
+      <div class="lane-body">
+        <div class="block intake-block" id="intake-basic" data-tip="Height, weight, waist, hip, age, dietary preference. Computes BMI + WHR.">Basic Info</div>
+        <div class="block intake-block" id="intake-goals" data-tip="Physical, nutrition, wellbeing goals. Past efforts. Motivation and tone.">Goals</div>
+        <div class="block intake-block" id="intake-habits" data-tip="Foods liked, cooking ability, exercise habits, injuries, daily steps, alcohol, caffeine.">Habits &amp; Lifestyle</div>
+        <div class="block intake-block" id="intake-eating" data-tip="Typical day, weekends, snacking, eating out, past diets.">Eating Patterns</div>
+        <div class="block intake-block" id="intake-medical" data-tip="Family conditions, injuries, medications, personal conditions.">Medical History</div>
+        <div class="block intake-block" id="intake-stress" data-tip="Stress level, sleep data, HRV, stress sources, coping strategies.">Stress &amp; Sleep</div>
+        <div class="block intake-block" id="intake-gut" data-tip="Symptom scores, food sensitivities. Flags for gastro referral.">Gut Health</div>
+        <div class="block intake-block" id="intake-blood" data-tip="All blood markers. Out-of-range flagging for supplements + referrals.">Bloodwork</div>
+        <div class="block intake-block" id="intake-ghq" data-tip="GHQ-28: 4 subscales. Depression threshold triggers psychiatrist referral.">GHQ-28</div>
+        <div class="block intake-block" id="intake-emotional" data-tip="Emotional eating, binge episodes, self-talk, body image, all-or-nothing patterns.">Emotional Health</div>
+      </div>
+    </div>
+
+    <!-- ============ LANE 2: PLAN GENERATION ============ -->
+    <div class="lane">
+      <div class="lane-header plan">
+        Plan Generation
+        <div class="lane-phase">Phase 2</div>
+      </div>
+      <div class="status-row">
+        <span class="status-pill on">DRAFT</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">COACH_REVIEW</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">APPROVED</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">DELIVERED</span>
+      </div>
+      <div class="lane-body">
+        <div class="section-label">Plan sections (15)</div>
+        <div class="block plan-block" id="plan-summary" data-tip="Client name, age, key metrics, top 3 goals. The 'cover page.'">Summary Card</div>
+        <div class="block plan-block" id="plan-coaching" data-tip="Explains the PAR cycle: Plan, Act, Record, Reassess.">Coaching Cycle</div>
+        <div class="block plan-block" id="plan-starting" data-tip="BMI, WHR, GHQ-28 scores, current activity level. Baseline snapshot.">Starting Point</div>
+        <div class="block plan-block" id="plan-behavior" data-tip="Stories, triggers, environment mapping. The behavioral layer of the plan.">Behavior Ecosystem</div>
+        <div class="block plan-block" id="plan-lifestyle" data-tip="Sleep hygiene, screen time, environment flags, social context.">Lifestyle &amp; Environment</div>
+        <div class="block plan-block" id="plan-nutguidance" data-tip="Calorie targets, macro splits, meal timing, hydration. The 'why.'">Nutrition Guidance</div>
+        <div class="block plan-block" id="plan-nutplan" data-tip="Specific meal examples built from foods client likes. IKEA effect.">Nutrition Plan</div>
+        <div class="block plan-block" id="plan-exguidance" data-tip="Exercise philosophy, progressive overload, injury considerations.">Exercise Guidance</div>
+        <div class="block plan-block" id="plan-explan" data-tip="Weekly schedule, specific exercises, NEAT targets, step goals.">Exercise Plan</div>
+        <div class="block plan-block" id="plan-stress" data-tip="Stress management strategies, sleep protocol, mental health flags.">Stress &amp; Mental Health</div>
+        <div class="block plan-block" id="plan-blood" data-tip="Blood marker interpretation, out-of-range flags, retest timeline.">Blood Report</div>
+        <div class="block plan-block" id="plan-gut" data-tip="Gut symptom analysis, elimination suggestions, specialist referral flags.">Gut Health</div>
+        <div class="block plan-block" id="plan-supps" data-tip="Specific supplements with dosage, timing, and medication interaction checks.">Supplementation</div>
+        <div class="block plan-block" id="plan-referrals" data-tip="Psychiatrist, gastro, physio, dietitian referrals based on intake flags.">Referrals</div>
+        <div class="block plan-block" id="plan-next" data-tip="What happens next: tracker setup, first check-in, weekly review cadence.">What Happens Next</div>
+
+        <div class="section-label" style="margin-top: 12px;">Coach decisions (7 areas)</div>
+        <div class="block plan-block" id="dec-nutrition" data-tip="Calories, protein, carbs, fats, fiber, water, meal count.">Nutrition Targets</div>
+        <div class="block plan-block" id="dec-exercise" data-tip="Exercise type, frequency, NEAT targets, step goals.">Exercise Plan</div>
+        <div class="block plan-block" id="dec-lifestyle" data-tip="Sleep targets, stress management, screen time goals.">Lifestyle</div>
+        <div class="block plan-block" id="dec-supps" data-tip="Supplement selections with dosage and timing.">Supplements</div>
+        <div class="block plan-block" id="dec-referrals" data-tip="Which specialists to refer to.">Referrals</div>
+        <div class="block plan-block" id="dec-habits" data-tip="3-5 micro-behaviors for weeks 1-2. These become tracker habit fields." style="border-left-color: var(--purple); font-weight: 600;">startingHabits[]</div>
+        <div class="block plan-block" id="dec-dashboard" data-tip="MINIMAL, STANDARD, or DATA_HEAVY. Clinical decision based on client psychology." style="border-left-color: var(--purple); font-weight: 600;">dashboardMode</div>
+      </div>
+    </div>
+
+    <!-- ============ LANE 3: TRACKER ============ -->
+    <div class="lane">
+      <div class="lane-header tracker">
+        Tracker + Check-ins
+        <div class="lane-phase">Phases 3, 5, 6</div>
+      </div>
+      <div class="status-row">
+        <span class="status-pill on">Template</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">Daily form</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">Saved</span>
+      </div>
+      <div class="lane-body">
+        <div class="block fn-block" id="fn-generate" data-tip="Pure function called on plan approval. Converts coach decisions into tracker fields.">generateTrackerTemplate()</div>
+
+        <div class="section-label">Template fields</div>
+        <div class="block tracker-block" id="track-habits" data-tip="From startingHabits[]. Yes / Partly / Not today. All dashboard modes.">Habit Cards
+          <div class="block-sub">yes / partly / not today</div>
+        </div>
+        <div class="block tracker-block" id="track-water" data-tip="Number input. STANDARD + DATA_HEAVY modes.">Water Intake
+          <div class="block-sub">STANDARD + DATA_HEAVY</div>
+        </div>
+        <div class="block tracker-block" id="track-sleep" data-tip="Select: Restful / Okay / Rough. STANDARD + DATA_HEAVY modes.">Sleep Quality
+          <div class="block-sub">STANDARD + DATA_HEAVY</div>
+        </div>
+        <div class="block tracker-block" id="track-movement" data-tip="Habit question for MINIMAL, number input for STANDARD+.">Movement / Steps
+          <div class="block-sub">all modes (varies)</div>
+        </div>
+        <div class="block tracker-block" id="track-meals" data-tip="Text input per meal slot. DATA_HEAVY mode only.">Meal Logging
+          <div class="block-sub">DATA_HEAVY only</div>
+        </div>
+        <div class="block tracker-block" id="track-reflection" data-tip="Rotating prompts: 'What felt good today?', 'Anything on your mind?' Always last.">Reflection Prompt
+          <div class="block-sub">all modes, always last</div>
+        </div>
+
+        <div class="section-label" style="margin-top: 12px;">Daily record</div>
+        <div class="block tracker-block" id="track-checkin" data-tip="One per client per day (upsert). Responses stored as JSON. Under 2 minutes." style="font-weight: 600;">DailyCheckIn
+          <div class="block-sub">unique per client + date</div>
+        </div>
+
+        <div class="section-label" style="margin-top: 12px;">Habit graduation</div>
+        <div class="block tracker-block" id="track-graduation" data-tip="Daily → twice-weekly (80% adherence) → weekly (100% for 3 weeks). Auto-demotes if drops. Coach approves all changes.">Graduation Engine
+          <div class="block-sub">daily → 2x/week → weekly</div>
+        </div>
+        <div class="block tracker-block" id="track-suggestions" data-tip="System auto-suggests tracker changes (graduate, demote, add habit). Coach approves before client sees.">Coach Suggestions
+          <div class="block-sub">approve / dismiss</div>
+        </div>
+
+        <div class="section-label" style="margin-top: 12px;">Client UX</div>
+        <div class="block tracker-block" id="track-par" data-tip="Plan > Act > Record > Reassess. Visual cue, not interactive.">PAR Cycle Indicator</div>
+        <div class="block tracker-block" id="track-streak" data-tip="'5 of 7 days' not '2 days missed.' Max 3 loss signals.">Gentle Streaks</div>
+        <div class="block tracker-block" id="track-voice" data-tip="Groq Whisper Large v3 Turbo. Mic button on reflection + intake narratives. Transcribes to text.">Voice Input
+          <div class="block-sub">Groq Whisper (free tier)</div>
+        </div>
+
+        <div class="section-label" style="margin-top: 12px;">Dashboard (Phase 5)</div>
+        <div class="block tracker-block" id="track-dashboard" data-tip="Tabbed: Today / Progress / Reviews / Plan. Mode-specific (MINIMAL/STANDARD/DATA_HEAVY). Recharts for trends.">Client Dashboard
+          <div class="block-sub">tabbed, collapsible, Recharts</div>
+        </div>
+        <div class="block tracker-block" id="track-trends" data-tip="Line charts for steps/water/sleep. Bar charts for habit adherence. Week-at-a-glance grid.">Metric Trends
+          <div class="block-sub">4w (STANDARD) / 8w (DATA_HEAVY)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ LANE 4: WEEKLY REVIEW ============ -->
+    <div class="lane">
+      <div class="lane-header review">
+        Weekly Review + Infrastructure
+        <div class="lane-phase">Phases 4, 7, 8</div>
+      </div>
+      <div class="status-row">
+        <span class="status-pill on">GENERATING</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">COACH_REVIEW</span>
+        <span class="status-arr">&rarr;</span>
+        <span class="status-pill on">DELIVERED</span>
+      </div>
+      <div class="lane-body">
+        <div class="block review-block" id="rev-aggregate" data-tip="Pull 7 days of check-ins. Compute habit adherence with gentle framing.">7-Day Aggregation</div>
+        <div class="block review-block" id="rev-citations" data-tip="Structured SQL citations. Every claim backed by specific check-in data.">Citation Engine
+          <div class="block-sub">structured SQL, not vector</div>
+        </div>
+        <div class="block review-block" id="rev-synthesis" data-tip="AI narrative: 'Protein in 18 of 21 meals (up from 14 last week).' Celebrate wins first.">Synthesis Narrative</div>
+        <div class="block review-block" id="rev-coach" data-tip="Coach reviews, edits, approves before client sees. Gatekeeper role.">Coach Approval Gate
+          <div class="block-sub">client never sees unreviewed</div>
+        </div>
+        <div class="block review-block" id="rev-deliver" data-tip="Delivered to client. Feeds 'Reassess' phase of PAR cycle.">Client Delivery</div>
+
+        <div class="section-label" style="margin-top: 20px;">Wearables (Phase 7, scaffolded)</div>
+        <div class="block review-block" id="rev-fitbit" data-tip="OAuth 2.0 flow, token management, data sync. Steps, sleep, heart rate, active minutes. Needs API credentials.">Fitbit Adapter
+          <div class="block-sub">OAuth + sync (scaffolded)</div>
+        </div>
+        <div class="block review-block" id="rev-googlefit" data-tip="OAuth 2.0 flow, token management, data sync. Steps, sleep. Needs API credentials.">Google Fit Adapter
+          <div class="block-sub">OAuth + sync (scaffolded)</div>
+        </div>
+        <div class="block review-block" id="rev-weardata" data-tip="WearableData model: clientId, provider, date, dataType (steps/sleep/heart_rate/active_minutes), value, unit.">Wearable Data Store
+          <div class="block-sub">steps, sleep, HR</div>
+        </div>
+
+        <div class="section-label" style="margin-top: 12px;">Infrastructure (Phase 8)</div>
+        <div class="block review-block" id="rev-pwa" data-tip="Web app manifest, service worker with offline caching, install prompt, iOS meta tags.">PWA
+          <div class="block-sub">installable, offline-capable</div>
+        </div>
+        <div class="block review-block" id="rev-security" data-tip="X-Frame-Options DENY, nosniff, HSTS, strict referrer, permissions policy (mic allowed).">Security Headers
+          <div class="block-sub">HSTS, XFO, CSP</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /lanes -->
+</div><!-- /diagram-wrap -->
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ========== CONNECTION DEFINITIONS ==========
+// Each: [sourceId, targetId, color, markerColor]
+const connections = [
+  // INTAKE → PLAN (blue)
+  ["intake-basic", "plan-summary", "blue"],
+  ["intake-basic", "plan-starting", "blue"],
+  ["intake-goals", "plan-summary", "blue"],
+  ["intake-goals", "plan-behavior", "blue"],
+  ["intake-goals", "plan-lifestyle", "blue"],
+  ["intake-habits", "plan-behavior", "blue"],
+  ["intake-habits", "plan-nutguidance", "blue"],
+  ["intake-habits", "plan-nutplan", "blue"],
+  ["intake-habits", "plan-explan", "blue"],
+  ["intake-eating", "plan-nutguidance", "blue"],
+  ["intake-eating", "plan-behavior", "blue"],
+  ["intake-medical", "plan-blood", "blue"],
+  ["intake-medical", "plan-supps", "blue"],
+  ["intake-medical", "plan-referrals", "blue"],
+  ["intake-medical", "plan-explan", "blue"],
+  ["intake-stress", "plan-stress", "blue"],
+  ["intake-stress", "plan-behavior", "blue"],
+  ["intake-gut", "plan-gut", "blue"],
+  ["intake-gut", "plan-referrals", "blue"],
+  ["intake-blood", "plan-blood", "blue"],
+  ["intake-blood", "plan-supps", "blue"],
+  ["intake-blood", "plan-referrals", "blue"],
+  ["intake-ghq", "plan-stress", "blue"],
+  ["intake-ghq", "plan-referrals", "blue"],
+  ["intake-ghq", "plan-behavior", "blue"],
+  ["intake-emotional", "plan-behavior", "blue"],
+  ["intake-emotional", "plan-stress", "blue"],
+  ["intake-emotional", "plan-lifestyle", "blue"],
+
+  // DECISIONS → TRACKER (purple)
+  ["dec-habits", "track-habits", "purple"],
+  ["dec-dashboard", "fn-generate", "purple"],
+  ["dec-nutrition", "track-water", "purple"],
+  ["dec-nutrition", "track-meals", "purple"],
+  ["dec-exercise", "track-movement", "purple"],
+  ["dec-lifestyle", "track-sleep", "purple"],
+
+  // TRACKER → REVIEW (emerald)
+  ["track-checkin", "rev-aggregate", "emerald"],
+  ["track-habits", "rev-aggregate", "emerald"],
+  ["track-reflection", "rev-citations", "emerald"],
+
+  // REVIEW → TRACKER (emerald — graduation feedback)
+  ["rev-deliver", "track-graduation", "emerald"],
+  ["track-graduation", "track-suggestions", "emerald"],
+
+  // REVIEW → PLAN feedback (amber)
+  ["rev-deliver", "plan-behavior", "amber"],
+
+  // DASHBOARD (emerald — fed by check-in + review data)
+  ["track-checkin", "track-trends", "emerald"],
+  ["rev-deliver", "track-dashboard", "emerald"],
+];
+
+const colorMap = {
+  blue: "#3B82F6",
+  purple: "#8B5CF6",
+  emerald: "#10B981",
+  amber: "#F59E0B",
+};
+
+// ========== DRAW ARROWS ==========
+const svg = document.getElementById("svgOverlay");
+const wrap = document.getElementById("diagramWrap");
+let paths = [];
+
+function getAnchor(el, side) {
+  const r = el.getBoundingClientRect();
+  const wr = wrap.getBoundingClientRect();
+  const x = side === "right" ? r.right - wr.left : r.left - wr.left;
+  const y = r.top + r.height / 2 - wr.top;
+  return { x, y };
+}
+
+function drawConnections() {
+  // Clear existing
+  paths.forEach(p => p.remove());
+  paths = [];
+
+  // Resize SVG
+  svg.setAttribute("width", wrap.scrollWidth);
+  svg.setAttribute("height", wrap.scrollHeight);
+
+  connections.forEach(([srcId, tgtId, color]) => {
+    const src = document.getElementById(srcId);
+    const tgt = document.getElementById(tgtId);
+    if (!src || !tgt) return;
+
+    const a = getAnchor(src, "right");
+    const b = getAnchor(tgt, "left");
+
+    // Bezier control points
+    const dx = Math.abs(b.x - a.x);
+    const cpOff = Math.max(dx * 0.4, 40);
+
+    const d = `M ${a.x} ${a.y} C ${a.x + cpOff} ${a.y}, ${b.x - cpOff} ${b.y}, ${b.x} ${b.y}`;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("stroke", colorMap[color]);
+    path.setAttribute("marker-end", `url(#arrow-${color})`);
+    path.dataset.src = srcId;
+    path.dataset.tgt = tgtId;
+    path.dataset.color = color;
+    svg.appendChild(path);
+    paths.push(path);
+  });
+}
+
+// ========== HOVER HIGHLIGHT ==========
+const allBlocks = document.querySelectorAll(".block");
+
+function highlightBlock(blockId) {
+  // Dim all paths, then highlight connected ones
+  const connectedIds = new Set();
+  connectedIds.add(blockId);
+
+  paths.forEach(p => {
+    const isSrc = p.dataset.src === blockId;
+    const isTgt = p.dataset.tgt === blockId;
+    if (isSrc || isTgt) {
+      p.classList.add("highlighted");
+      p.classList.remove("dimmed");
+      connectedIds.add(p.dataset.src);
+      connectedIds.add(p.dataset.tgt);
+    } else {
+      p.classList.remove("highlighted");
+      p.classList.add("dimmed");
+    }
+  });
+
+  allBlocks.forEach(b => {
+    if (connectedIds.has(b.id)) {
+      b.classList.add("highlighted");
+    } else if (b.id) {
+      b.style.opacity = "0.4";
+    }
+  });
+}
+
+function clearHighlight() {
+  paths.forEach(p => {
+    p.classList.remove("highlighted", "dimmed");
+  });
+  allBlocks.forEach(b => {
+    b.classList.remove("highlighted");
+    b.style.opacity = "";
+  });
+}
+
+allBlocks.forEach(block => {
+  if (!block.id) return;
+  block.addEventListener("mouseenter", () => highlightBlock(block.id));
+  block.addEventListener("mouseleave", clearHighlight);
+});
+
+// ========== TOOLTIP ==========
+const tooltip = document.getElementById("tooltip");
+
+allBlocks.forEach(block => {
+  const tip = block.dataset.tip;
+  if (!tip) return;
+
+  block.addEventListener("mouseenter", (e) => {
+    tooltip.textContent = tip;
+    tooltip.classList.add("visible");
+  });
+  block.addEventListener("mousemove", (e) => {
+    tooltip.style.left = (e.clientX + 14) + "px";
+    tooltip.style.top = (e.clientY + 14) + "px";
+  });
+  block.addEventListener("mouseleave", () => {
+    tooltip.classList.remove("visible");
+  });
+});
+
+// ========== INIT ==========
+drawConnections();
+window.addEventListener("resize", () => {
+  clearTimeout(window._resizeTimer);
+  window._resizeTimer = setTimeout(drawConnections, 100);
+});
+</script>
+
+</body>
+</html>

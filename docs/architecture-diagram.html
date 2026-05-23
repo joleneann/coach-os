@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coach OS — Architecture Diagram</title>
+<style>
+  :root {
+    --stone-50: #fafaf9;
+    --stone-100: #f5f5f4;
+    --stone-200: #e7e5e4;
+    --stone-300: #d6d3d1;
+    --stone-400: #a8a29e;
+    --stone-500: #78716c;
+    --stone-600: #57534e;
+    --stone-700: #44403c;
+    --stone-800: #292524;
+    --stone-900: #1c1917;
+    --amber-50: #fffbeb;
+    --amber-100: #fef3c7;
+    --amber-200: #fde68a;
+    --amber-300: #fcd34d;
+    --amber-400: #fbbf24;
+    --amber-500: #f59e0b;
+    --amber-600: #d97706;
+    --amber-700: #b45309;
+    --amber-800: #92400e;
+    --amber-900: #78350f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--stone-50);
+    color: var(--stone-800);
+    line-height: 1.5;
+  }
+
+  /* ---- HEADER ---- */
+  .header {
+    background: var(--stone-900);
+    color: white;
+    padding: 32px 40px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header p { color: var(--stone-400); font-size: 13px; margin-top: 4px; }
+
+  /* ---- LEGEND ---- */
+  .legend {
+    display: flex;
+    gap: 24px;
+    padding: 16px 40px;
+    background: white;
+    border-bottom: 1px solid var(--stone-200);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 78px;
+    z-index: 99;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--stone-600);
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-dot.complete { background: var(--amber-400); }
+  .legend-dot.current { background: var(--amber-300); border: 2px solid var(--amber-600); }
+  .legend-dot.future { background: var(--stone-200); }
+  .legend-arrow {
+    width: 24px;
+    height: 2px;
+    background: var(--amber-500);
+    position: relative;
+  }
+  .legend-arrow::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    border: 4px solid transparent;
+    border-left: 6px solid var(--amber-500);
+  }
+  .legend-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    background: var(--stone-100);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .legend-status .arr { color: var(--amber-600); font-weight: 700; }
+
+  /* ---- MAIN CONTAINER ---- */
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  /* ---- USER STATUS FLOW ---- */
+  .status-flow-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 40px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--stone-200);
+  }
+  .status-flow-bar h3 {
+    font-size: 13px;
+    color: var(--stone-500);
+    margin-right: 20px;
+    white-space: nowrap;
+  }
+  .sf-step {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .sf-step.active { background: var(--amber-100); color: var(--amber-800); }
+  .sf-step.inactive { background: var(--stone-100); color: var(--stone-400); }
+  .sf-arrow {
+    width: 24px;
+    height: 2px;
+    background: var(--stone-300);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .sf-arrow::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    border: 4px solid transparent;
+    border-left: 5px solid var(--stone-300);
+  }
+
+  /* ---- PHASE CARDS ---- */
+  .phase {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--stone-200);
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .phase:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .phase.complete { border-left: 4px solid var(--amber-400); }
+  .phase.current { border-left: 4px solid var(--amber-500); box-shadow: 0 2px 8px rgba(251,191,36,0.15); }
+  .phase.future { border-left: 4px solid var(--stone-200); }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .phase-header:hover { background: var(--stone-50); }
+  .phase-left { display: flex; align-items: center; gap: 16px; }
+  .phase-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .complete .phase-number { background: var(--amber-100); color: var(--amber-700); }
+  .current .phase-number { background: var(--amber-400); color: white; }
+  .future .phase-number { background: var(--stone-100); color: var(--stone-400); }
+
+  .phase-title { font-size: 16px; font-weight: 600; color: var(--stone-900); }
+  .phase-subtitle { font-size: 12px; color: var(--stone-500); margin-top: 2px; }
+
+  .phase-badges { display: flex; gap: 8px; align-items: center; }
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .badge.done { background: var(--amber-100); color: var(--amber-700); }
+  .badge.wip { background: var(--amber-50); color: var(--amber-600); border: 1px solid var(--amber-200); }
+  .badge.todo { background: var(--stone-100); color: var(--stone-400); }
+
+  .chevron {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s;
+    color: var(--stone-400);
+  }
+  .phase.open .chevron { transform: rotate(180deg); }
+
+  /* ---- PHASE BODY ---- */
+  .phase-body {
+    display: none;
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--stone-100);
+  }
+  .phase.open .phase-body { display: block; }
+
+  /* ---- GRID LAYOUTS INSIDE PHASE ---- */
+  .columns { display: grid; gap: 20px; margin-top: 20px; }
+  .columns-2 { grid-template-columns: 1fr 1fr; }
+  .columns-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .columns-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  @media (max-width: 900px) {
+    .columns-2, .columns-3, .columns-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ---- INNER CARDS ---- */
+  .card {
+    background: var(--stone-50);
+    border: 1px solid var(--stone-200);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stone-700);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card h4 .icon { font-size: 14px; }
+  .card ul { list-style: none; padding: 0; }
+  .card li {
+    font-size: 12px;
+    color: var(--stone-600);
+    padding: 3px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .card li::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--stone-300);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  /* ---- MODEL CARDS ---- */
+  .model-card {
+    background: white;
+    border: 1px solid var(--stone-200);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 8px;
+  }
+  .model-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--amber-700);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    margin-bottom: 6px;
+  }
+  .model-fields {
+    font-size: 11px;
+    color: var(--stone-500);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    line-height: 1.6;
+  }
+
+  /* ---- STATUS FLOW ---- */
+  .status-chain {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .status-step {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .status-step.on { background: var(--amber-100); color: var(--amber-700); }
+  .status-step.off { background: var(--stone-100); color: var(--stone-400); }
+  .status-arrow {
+    font-size: 12px;
+    color: var(--stone-300);
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* ---- DATA FLOW ARROWS (between phases) ---- */
+  .flow-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    gap: 12px;
+  }
+  .flow-line {
+    width: 2px;
+    height: 32px;
+    background: linear-gradient(to bottom, var(--amber-300), var(--amber-500));
+    position: relative;
+  }
+  .flow-line::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: -4px;
+    border: 5px solid transparent;
+    border-top: 6px solid var(--amber-500);
+  }
+  .flow-label {
+    font-size: 11px;
+    color: var(--amber-700);
+    font-weight: 500;
+    background: var(--amber-50);
+    padding: 4px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--amber-200);
+    white-space: nowrap;
+  }
+
+  /* ---- MAPPING TABLE ---- */
+  .mapping-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .mapping-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--stone-100);
+    color: var(--stone-600);
+    font-weight: 600;
+    font-size: 11px;
+    border-bottom: 1px solid var(--stone-200);
+  }
+  .mapping-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--stone-100);
+    color: var(--stone-600);
+    vertical-align: top;
+  }
+  .mapping-table tr:hover td { background: var(--amber-50); }
+  .mapping-source {
+    color: var(--stone-700);
+    font-weight: 500;
+  }
+  .mapping-arrow-cell {
+    color: var(--amber-500);
+    text-align: center;
+    font-size: 14px;
+  }
+
+  /* ---- WORKFLOW STEPS ---- */
+  .workflow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .wf-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 100px;
+    text-align: center;
+  }
+  .wf-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .wf-circle.done { background: var(--amber-100); }
+  .wf-circle.pending { background: var(--stone-100); }
+  .wf-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--stone-600);
+    max-width: 90px;
+  }
+  .wf-connector {
+    width: 24px;
+    height: 2px;
+    background: var(--stone-300);
+    flex-shrink: 0;
+  }
+
+  /* ---- BEHAVIORAL DESIGN NOTES ---- */
+  .design-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--amber-50);
+    border-radius: 8px;
+    border: 1px solid var(--amber-100);
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--amber-800);
+  }
+  .design-note .dn-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ---- TECH TAGS ---- */
+  .tech-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .tech-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--stone-100);
+    color: var(--stone-500);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ---- CYCLE DIAGRAM ---- */
+  .cycle-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .cycle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cycle-node {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 2px;
+  }
+  .cycle-node.c-active { background: var(--amber-100); color: var(--amber-700); border: 2px solid var(--amber-300); }
+  .cycle-node.c-inactive { background: var(--stone-100); color: var(--stone-400); border: 2px solid var(--stone-200); }
+  .cycle-node .c-icon { font-size: 18px; }
+  .cycle-arrow { color: var(--stone-300); font-size: 18px; }
+
+  /* ---- SECTION TITLE ---- */
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stone-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 24px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--stone-200);
+  }
+
+  /* ---- FULL-WIDTH SPAN ---- */
+  .full-span { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Coach OS  /  System Architecture</h1>
+  <p>8 build phases, 4 core systems, complete data flow</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot complete"></div> Complete</div>
+  <div class="legend-item"><div class="legend-dot current"></div> In progress</div>
+  <div class="legend-item"><div class="legend-dot future"></div> Future</div>
+  <div class="legend-item"><div class="legend-arrow"></div> Data flow</div>
+  <div class="legend-item">
+    <div class="legend-status"><span>DRAFT</span><span class="arr">&rarr;</span><span>APPROVED</span></div>
+    Status progression
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- User Status Flow -->
+  <div class="status-flow-bar">
+    <h3>Client journey</h3>
+    <div class="sf-step active">INTAKE</div>
+    <div class="sf-arrow"></div>
+    <div class="sf-step active">ACTIVE</div>
+    <div class="sf-arrow"></div>
+    <div class="sf-step inactive">PAUSED</div>
+    <div class="sf-arrow"></div>
+    <div class="sf-step inactive">GRADUATED</div>
+  </div>
+
+  <!-- ============================== PHASE 1 ============================== -->
+  <div class="phase complete open" data-phase="1">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">1</div>
+        <div>
+          <div class="phase-title">Foundation + Intake</div>
+          <div class="phase-subtitle">Scaffolding, auth, 10-section intake form, coach view</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge done">Complete</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-3">
+
+        <!-- 10 Intake Sections -->
+        <div class="card">
+          <h4><span class="icon">&#x1F4CB;</span> 10 Intake Sections</h4>
+          <ul>
+            <li>Basic Info (height, weight, waist, hip, age, dietary preference)</li>
+            <li>Goals (physical, nutrition, wellbeing, motivation)</li>
+            <li>Habits &amp; Lifestyle (cooking, exercise, injuries, steps, alcohol)</li>
+            <li>Eating Patterns (typical day, weekends, snacking, eating out)</li>
+            <li>Medical History (family, medications, conditions)</li>
+            <li>Stress &amp; Sleep (stress level, HRV, sleep quality, coping)</li>
+            <li>Gut Health (symptom scores, food sensitivities)</li>
+            <li>Bloodwork (all markers, out-of-range flagging)</li>
+            <li>GHQ-28 (4 subscales, depression threshold for referral)</li>
+            <li>Emotional Health (emotional eating, body image, self-talk)</li>
+          </ul>
+        </div>
+
+        <!-- Key Features -->
+        <div class="card">
+          <h4><span class="icon">&#x2699;</span> Features</h4>
+          <ul>
+            <li>Continuous scroll form (not multi-page)</li>
+            <li>Conditional branching (show/hide questions)</li>
+            <li>Save and resume (currentSection tracking)</li>
+            <li>Voice input for narrative sections (Groq Whisper)</li>
+            <li>Progress bar with section reframing</li>
+            <li>IKEA effect: client picks own food record</li>
+            <li>Coach view: see all client intakes + status</li>
+            <li>Auto-compute: BMI, WHR, GHQ-28 subscales</li>
+            <li>Red flag detection (Groq Llama 3.3 70B)</li>
+          </ul>
+          <div class="tech-tags">
+            <span class="tech-tag">NextAuth.js</span>
+            <span class="tech-tag">Prisma</span>
+            <span class="tech-tag">Next.js 15</span>
+            <span class="tech-tag">Groq Whisper</span>
+            <span class="tech-tag">Groq Llama 3.3</span>
+          </div>
+        </div>
+
+        <!-- Data Models -->
+        <div class="card">
+          <h4><span class="icon">&#x1F5C4;</span> Data Models</h4>
+          <div class="model-card">
+            <div class="model-name">User</div>
+            <div class="model-fields">
+              role: COACH | CLIENT<br>
+              status: INTAKE | ACTIVE | PAUSED | GRADUATED<br>
+              dashboardMode: MINIMAL | STANDARD | DATA_HEAVY<br>
+              coachId: User? (many clients per coach)
+            </div>
+          </div>
+          <div class="model-card">
+            <div class="model-name">IntakeSubmission</div>
+            <div class="model-fields">
+              clientId, status, currentSection<br>
+              summary: Json (BMI, WHR, GHQ-28)<br>
+              redFlags: Json
+            </div>
+          </div>
+          <div class="model-card">
+            <div class="model-name">IntakeResponse</div>
+            <div class="model-fields">
+              submissionId, sectionKey, questionKey<br>
+              value: Json, inputMethod: TYPED | VOICE<br>
+              rawVoiceTranscript?
+            </div>
+          </div>
+          <div class="status-chain">
+            <span class="status-step on">IN_PROGRESS</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step on">COMPLETE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow connector: Phase 1 → Phase 2 -->
+  <div class="flow-connector">
+    <div class="flow-line"></div>
+    <div class="flow-label">10 intake sections feed 15 plan sections</div>
+    <div class="flow-line"></div>
+  </div>
+
+  <!-- ============================== PHASE 2 ============================== -->
+  <div class="phase complete" data-phase="2">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">2</div>
+        <div>
+          <div class="phase-title">Plan Generation</div>
+          <div class="phase-subtitle">5-step workflow: summarize, decide, draft, review, approve</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge done">Complete</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+
+      <!-- 5-step workflow -->
+      <div class="section-title">Plan generation workflow</div>
+      <div class="workflow">
+        <div class="wf-step"><div class="wf-circle done">&#x1F4CA;</div><div class="wf-label">Summarize Intake</div></div>
+        <div class="wf-connector"></div>
+        <div class="wf-step"><div class="wf-circle done">&#x1F9D1;&#x200D;&#x2695;&#xFE0F;</div><div class="wf-label">Coach Decisions</div></div>
+        <div class="wf-connector"></div>
+        <div class="wf-step"><div class="wf-circle done">&#x1F916;</div><div class="wf-label">AI Draft (Claude)</div></div>
+        <div class="wf-connector"></div>
+        <div class="wf-step"><div class="wf-circle done">&#x270F;</div><div class="wf-label">Coach Review + Edit</div></div>
+        <div class="wf-connector"></div>
+        <div class="wf-step"><div class="wf-circle done">&#x2705;</div><div class="wf-label">Approve + Deliver</div></div>
+      </div>
+
+      <div class="columns columns-2" style="margin-top: 24px;">
+
+        <!-- Intake → Plan mapping -->
+        <div class="card full-span">
+          <h4><span class="icon">&#x1F517;</span> Intake to Plan Section Mapping</h4>
+          <table class="mapping-table">
+            <thead>
+              <tr><th>Intake Section</th><th></th><th>Plan Sections Fed</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mapping-source">Basic Info</td><td class="mapping-arrow-cell">&rarr;</td><td>Summary Card, Starting Point</td></tr>
+              <tr><td class="mapping-source">Goals</td><td class="mapping-arrow-cell">&rarr;</td><td>Summary Card, Behavior Ecosystem</td></tr>
+              <tr><td class="mapping-source">Habits &amp; Lifestyle</td><td class="mapping-arrow-cell">&rarr;</td><td>Behavior Ecosystem, Nutrition Guidance, Exercise Plan</td></tr>
+              <tr><td class="mapping-source">Eating Patterns</td><td class="mapping-arrow-cell">&rarr;</td><td>Nutrition Guidance, Behavior Ecosystem</td></tr>
+              <tr><td class="mapping-source">Medical History</td><td class="mapping-arrow-cell">&rarr;</td><td>Blood Report, Exercise Plan, Supplementation, Referrals</td></tr>
+              <tr><td class="mapping-source">Stress &amp; Sleep</td><td class="mapping-arrow-cell">&rarr;</td><td>Stress &amp; Mental Health, Behavior Ecosystem</td></tr>
+              <tr><td class="mapping-source">Gut Health</td><td class="mapping-arrow-cell">&rarr;</td><td>Gut Health Section, Referrals</td></tr>
+              <tr><td class="mapping-source">Bloodwork</td><td class="mapping-arrow-cell">&rarr;</td><td>Blood Report, Supplementation, Referrals</td></tr>
+              <tr><td class="mapping-source">GHQ-28</td><td class="mapping-arrow-cell">&rarr;</td><td>Stress &amp; Mental Health, Referrals, Behavior Ecosystem</td></tr>
+              <tr><td class="mapping-source">Emotional Health</td><td class="mapping-arrow-cell">&rarr;</td><td>Behavior Ecosystem, Stress &amp; Mental Health</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="columns columns-2" style="margin-top: 16px;">
+
+        <!-- 15 Plan Sections -->
+        <div class="card">
+          <h4><span class="icon">&#x1F4D6;</span> 15 Plan Sections</h4>
+          <ul>
+            <li>Summary Card</li>
+            <li>Coaching Cycle (PAR)</li>
+            <li>Starting Point (metrics, BMI, WHR)</li>
+            <li>Behavior Ecosystem</li>
+            <li>Lifestyle &amp; Environment</li>
+            <li>Nutrition Guidance</li>
+            <li>Nutrition Plan</li>
+            <li>Exercise Guidance</li>
+            <li>Exercise Plan</li>
+            <li>Stress &amp; Mental Health</li>
+            <li>Blood Report</li>
+            <li>Gut Health</li>
+            <li>Supplementation</li>
+            <li>Referrals</li>
+            <li>What Happens Next</li>
+          </ul>
+        </div>
+
+        <!-- Coach Decisions + Models -->
+        <div class="card">
+          <h4><span class="icon">&#x1F9D1;&#x200D;&#x2695;&#xFE0F;</span> Coach Decisions (7 areas)</h4>
+          <ul>
+            <li>Nutrition targets (calories, protein, carbs, fats, fiber, water)</li>
+            <li>Exercise plan (type, frequency, NEAT targets)</li>
+            <li>Lifestyle (sleep, stress management, screen time)</li>
+            <li>Supplements (with dosage, timing)</li>
+            <li>Referrals (psychiatrist, gastro, physio, etc.)</li>
+            <li><strong>startingHabits[]</strong> (3-5 micro-behaviors for weeks 1-2)</li>
+            <li><strong>dashboardMode</strong> (MINIMAL | STANDARD | DATA_HEAVY)</li>
+          </ul>
+          <div class="model-card">
+            <div class="model-name">Plan</div>
+            <div class="model-fields">
+              clientId, version, coachDecisions: Json<br>
+              generatedContent: Json, coachEdits: Json
+            </div>
+          </div>
+          <div class="model-card">
+            <div class="model-name">PlanSection</div>
+            <div class="model-fields">
+              planId, sectionType, content, order
+            </div>
+          </div>
+          <div class="status-chain">
+            <span class="status-step on">DRAFT</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step on">COACH_REVIEW</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step on">APPROVED</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step on">DELIVERED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow connector: Phase 2 → Phase 3 -->
+  <div class="flow-connector">
+    <div class="flow-line"></div>
+    <div class="flow-label">Plan approval triggers TrackerTemplate generation from coachDecisions</div>
+    <div class="flow-line"></div>
+  </div>
+
+  <!-- ============================== PHASE 3 ============================== -->
+  <div class="phase current" data-phase="3">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">3</div>
+        <div>
+          <div class="phase-title">Tracker + Daily Check-ins</div>
+          <div class="phase-subtitle">Template from decisions, mobile micro-form, journal-style UX</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge wip">In Progress</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-3">
+
+        <!-- Template Generation -->
+        <div class="card">
+          <h4><span class="icon">&#x2699;</span> Template Generation</h4>
+          <ul>
+            <li><strong>Input:</strong> coachDecisions from approved Plan</li>
+            <li>startingHabits[] &rarr; habit fields (yes/partial/no)</li>
+            <li>Nutrition targets &rarr; water, meal fields</li>
+            <li>Exercise targets &rarr; steps/movement fields</li>
+            <li>Always adds: sleep quality + reflection prompt</li>
+            <li>Each field tagged with dashboardModes[]</li>
+          </ul>
+          <div class="model-card">
+            <div class="model-name">TrackerTemplate</div>
+            <div class="model-fields">
+              clientId, planId<br>
+              fields: Json (TrackerField[])
+            </div>
+          </div>
+          <div class="design-note">
+            <span class="dn-icon">&#x1F3AF;</span>
+            <span>generateTrackerTemplate() is a pure function. Called on plan approval. Creates one template per client.</span>
+          </div>
+        </div>
+
+        <!-- Dashboard Modes -->
+        <div class="card">
+          <h4><span class="icon">&#x1F4F1;</span> Dashboard Modes</h4>
+          <table class="mapping-table">
+            <thead><tr><th>Mode</th><th>Fields Shown</th></tr></thead>
+            <tbody>
+              <tr><td class="mapping-source">MINIMAL</td><td>Habits + reflection only</td></tr>
+              <tr><td class="mapping-source">STANDARD</td><td>+ water, sleep, steps metrics</td></tr>
+              <tr><td class="mapping-source">DATA_HEAVY</td><td>+ meal logging per meal slot</td></tr>
+            </tbody>
+          </table>
+          <div class="design-note">
+            <span class="dn-icon">&#x1F9E0;</span>
+            <span>Dashboard mode is a clinical decision. Coach selects based on client psychology, not imposed uniformly.</span>
+          </div>
+        </div>
+
+        <!-- Check-in UX -->
+        <div class="card">
+          <h4><span class="icon">&#x270D;</span> Daily Check-in UX</h4>
+          <ul>
+            <li>"How was your day?" (not "Daily Check-in Form")</li>
+            <li>Habit cards: yes / partly / not today</li>
+            <li>Metric inputs: number, select</li>
+            <li>Reflection: rotating prompts (7 options by day)</li>
+            <li>Under 2 minutes for MINIMAL mode</li>
+            <li>Pre-populates if already checked in (edit mode)</li>
+            <li>Gentle streaks: "5 of 7 days"</li>
+            <li>Max 3 loss signals</li>
+          </ul>
+          <div class="model-card">
+            <div class="model-name">DailyCheckIn</div>
+            <div class="model-fields">
+              clientId, date: Date (unique per client)<br>
+              responses: Json, voiceNoteUrl?<br>
+              voiceTranscript?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAR Cycle -->
+      <div class="section-title">PAR Cycle (visible to client)</div>
+      <div class="cycle-container">
+        <div class="cycle">
+          <div class="cycle-node c-active"><span class="c-icon">&#x1F4D6;</span>Plan</div>
+          <span class="cycle-arrow">&rarr;</span>
+          <div class="cycle-node c-active"><span class="c-icon">&#x1F3C3;</span>Act</div>
+          <span class="cycle-arrow">&rarr;</span>
+          <div class="cycle-node c-active"><span class="c-icon">&#x270D;</span>Record</div>
+          <span class="cycle-arrow">&rarr;</span>
+          <div class="cycle-node c-inactive"><span class="c-icon">&#x1F504;</span>Reassess</div>
+        </div>
+      </div>
+
+      <!-- Behavioral design -->
+      <div class="section-title">Behavioral design (non-negotiable)</div>
+      <div class="columns columns-2">
+        <div class="design-note">
+          <span class="dn-icon">&#x1F49B;</span>
+          <span><strong>No shame, no blame.</strong> "Not today" not "Missed." Stone/amber palette only. No red/green adherence coding.</span>
+        </div>
+        <div class="design-note">
+          <span class="dn-icon">&#x26D4;</span>
+          <span><strong>Anti-patterns.</strong> No badges, leaderboards, points, or gamification of any kind. Journal, not dashboard.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow connector: Phase 3 → Phase 4 -->
+  <div class="flow-connector">
+    <div class="flow-line"></div>
+    <div class="flow-label">7 days of DailyCheckIn records feed weekly aggregation + citation engine</div>
+    <div class="flow-line"></div>
+  </div>
+
+  <!-- ============================== PHASE 4 ============================== -->
+  <div class="phase future" data-phase="4">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">4</div>
+        <div>
+          <div class="phase-title">Weekly Review + RAG Citations</div>
+          <div class="phase-subtitle">Aggregate check-ins, synthesize with citations, coach approval gate</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge todo">Not started</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-3">
+        <div class="card">
+          <h4><span class="icon">&#x1F4CA;</span> Aggregation</h4>
+          <ul>
+            <li>Pull 7 days of DailyCheckIn for client</li>
+            <li>Compute habit adherence (gentle framing)</li>
+            <li>Summarize metric trends (water, steps, sleep)</li>
+            <li>Extract reflection themes</li>
+            <li>Structured SQL queries, not vector search</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F4DD;</span> Synthesis + Citations</h4>
+          <ul>
+            <li>AI generates narrative: "Protein in 18 of 21 meals (up from 14 last week)"</li>
+            <li>Every claim backed by citation to specific check-in data</li>
+            <li>Celebrate behavioral wins first</li>
+            <li>1-2 small activators for next week</li>
+            <li>Frame as "Reassess" phase of PAR cycle</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F5C4;</span> Data Model</h4>
+          <div class="model-card">
+            <div class="model-name">WeeklyReview</div>
+            <div class="model-fields">
+              clientId, weekStartDate (unique)<br>
+              synthesisData: Json<br>
+              citations: Json<br>
+              coachFeedback: String?
+            </div>
+          </div>
+          <div class="status-chain">
+            <span class="status-step off">GENERATING</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step off">COACH_REVIEW</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step off">APPROVED</span>
+            <span class="status-arrow">&rarr;</span>
+            <span class="status-step off">DELIVERED</span>
+          </div>
+          <div class="design-note">
+            <span class="dn-icon">&#x1F512;</span>
+            <span><strong>Coach approval gate.</strong> Client never sees the weekly review until coach has reviewed and approved it.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow connector: Phase 4 → Phase 5 -->
+  <div class="flow-connector">
+    <div class="flow-line"></div>
+    <div class="flow-label">WeeklyReview + TrackerTemplate + DailyCheckIn feed configurable dashboard</div>
+    <div class="flow-line"></div>
+  </div>
+
+  <!-- ============================== PHASE 5 ============================== -->
+  <div class="phase future" data-phase="5">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">5</div>
+        <div>
+          <div class="phase-title">Client Dashboard</div>
+          <div class="phase-subtitle">Configurable views: minimal, standard, data-heavy</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge todo">Not started</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-3">
+        <div class="card">
+          <h4><span class="icon">&#x1F4F1;</span> MINIMAL</h4>
+          <ul>
+            <li>This week's review summary</li>
+            <li>One key habit stat</li>
+            <li>Check-in entry point</li>
+            <li>For clients who get overwhelmed by data</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F4BB;</span> STANDARD</h4>
+          <ul>
+            <li>Weekly review + habit trends</li>
+            <li>Next week preview</li>
+            <li>Gentle streak visualization</li>
+            <li>For most clients</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F4CA;</span> DATA_HEAVY</h4>
+          <ul>
+            <li>Full metrics dashboard</li>
+            <li>Historical charts</li>
+            <li>Macro breakdown trends</li>
+            <li>For data-driven clients</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== PHASE 6 ============================== -->
+  <div class="phase future" data-phase="6">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">6</div>
+        <div>
+          <div class="phase-title">Voice Input + Proactive Nudges</div>
+          <div class="phase-subtitle">Whisper transcription, coach-controlled nudge triggers</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge todo">Not started</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-2">
+        <div class="card">
+          <h4><span class="icon">&#x1F3A4;</span> Voice Input</h4>
+          <ul>
+            <li>Groq Whisper free tier transcription</li>
+            <li>Intake: narrative sections (goals, stress coping, emotional health)</li>
+            <li>Check-in: daily voice notes alongside typed reflection</li>
+            <li>Stored as voiceNoteUrl + voiceTranscript on DailyCheckIn</li>
+          </ul>
+          <div class="tech-tags">
+            <span class="tech-tag">Groq Whisper</span>
+          </div>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F514;</span> Proactive Nudges</h4>
+          <ul>
+            <li>Rule-based triggers (not AI-generated spam)</li>
+            <li>Client misses 3 days: coach gets flagged, not client bombarded</li>
+            <li>Coach sends nudge templates: "Hey, haven't heard from you. Everything okay?"</li>
+            <li>Behavioral readiness: resource library links timed by coaching readiness</li>
+          </ul>
+          <div class="design-note">
+            <span class="dn-icon">&#x1F6E1;</span>
+            <span><strong>Coach controls nudges.</strong> System flags, coach decides. No automated client messages.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== PHASE 7 ============================== -->
+  <div class="phase future" data-phase="7">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">7</div>
+        <div>
+          <div class="phase-title">Wearable Integration</div>
+          <div class="phase-subtitle">Fitbit, Google Fit. Apple Health deferred.</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge todo">Not started</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-3">
+        <div class="card">
+          <h4><span class="icon">&#x231A;</span> Fitbit API</h4>
+          <ul>
+            <li>Steps, sleep duration, heart rate</li>
+            <li>Auto-populate tracker metrics</li>
+            <li>Display alongside self-reported data</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F4F1;</span> Google Fit API</h4>
+          <ul>
+            <li>Steps, activity minutes</li>
+            <li>Sleep tracking (if available)</li>
+            <li>Android-first integration</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F34E;</span> Apple Health</h4>
+          <ul>
+            <li>Deferred (iOS-specific complexity)</li>
+            <li>Requires native app or HealthKit bridge</li>
+            <li>Consider after PWA is solid</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== PHASE 8 ============================== -->
+  <div class="phase future" data-phase="8">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <div class="phase-left">
+        <div class="phase-number">8</div>
+        <div>
+          <div class="phase-title">Polish + Security</div>
+          <div class="phase-subtitle">Coach dashboard, mobile PWA, security scanning</div>
+        </div>
+      </div>
+      <div class="phase-badges">
+        <span class="badge todo">Not started</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="columns columns-3">
+        <div class="card">
+          <h4><span class="icon">&#x1F4BB;</span> Coach Dashboard</h4>
+          <ul>
+            <li>Client management overview</li>
+            <li>Bulk actions</li>
+            <li>Export capabilities</li>
+            <li>At-a-glance client health</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F4F1;</span> Mobile PWA</h4>
+          <ul>
+            <li>Install prompt</li>
+            <li>Offline check-in caching</li>
+            <li>Push notifications</li>
+            <li>Mobile-optimized layout pass</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="icon">&#x1F512;</span> Security</h4>
+          <ul>
+            <li>Snyk dependency scanning</li>
+            <li>OWASP ZAP vulnerability testing</li>
+            <li>Penetration testing</li>
+            <li>HIPAA-awareness review</li>
+          </ul>
+          <div class="tech-tags">
+            <span class="tech-tag">Snyk</span>
+            <span class="tech-tag">OWASP ZAP</span>
+            <span class="tech-tag">PWA</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== FEEDBACK CYCLE ============================== -->
+  <div class="flow-connector" style="margin-top: 32px;">
+    <div class="flow-line"></div>
+    <div class="flow-label" style="background: var(--stone-100); border-color: var(--stone-300); color: var(--stone-600);">
+      Weekly Review "Reassess" feeds back into next plan revision (continuous coaching cycle)
+    </div>
+    <div class="flow-line"></div>
+  </div>
+
+  <!-- Tech Stack Footer -->
+  <div style="margin-top: 40px; padding: 24px; background: white; border-radius: 12px; border: 1px solid var(--stone-200);">
+    <h3 style="font-size: 14px; color: var(--stone-700); margin-bottom: 16px;">Tech Stack</h3>
+    <div class="tech-tags" style="gap: 8px;">
+      <span class="tech-tag" style="background: var(--amber-50); color: var(--amber-700);">Next.js 15 (App Router)</span>
+      <span class="tech-tag" style="background: var(--amber-50); color: var(--amber-700);">PostgreSQL + Prisma</span>
+      <span class="tech-tag" style="background: var(--amber-50); color: var(--amber-700);">NextAuth.js</span>
+      <span class="tech-tag">Claude Code (plan drafting, weekly synthesis)</span>
+      <span class="tech-tag">Groq Llama 3.3 70B (intake summaries, red flags)</span>
+      <span class="tech-tag">Groq Whisper (voice transcription)</span>
+      <span class="tech-tag">Vercel (hosting)</span>
+      <span class="tech-tag">Supabase (database)</span>
+      <span class="tech-tag">Resend (email)</span>
+      <span class="tech-tag">react-pdf (PDF export)</span>
+    </div>
+    <p style="font-size: 11px; color: var(--stone-400); margin-top: 12px;">Total cost: $0 beyond existing Claude subscription. All AI/hosting services on free tiers.</p>
+  </div>
+
+</div>
+
+<script>
+function togglePhase(header) {
+  const phase = header.closest('.phase');
+  phase.classList.toggle('open');
+}
+
+// Open Phase 1 by default (already has class 'open')
+</script>
+
+</body>
+</html>

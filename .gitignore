@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -55,6 +56,13 @@ Old Method/
 sample_plan_text.txt
 scripts/create-learning-guide.js
 scripts/create-product-spec.js
+
+# Generated client data (plan drafts, review drafts) — contains PII
+/tmp/
+
+# Local dev artifacts
+cookies.txt
+.claude/
 
 # Private IP — clinical content, prompts, templates
 # These files contain proprietary coaching methodology

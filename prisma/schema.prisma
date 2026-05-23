@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Auth & Users ───────────────────────────────────────────
@@ -53,11 +54,13 @@ model User {
   dashboardMode DashboardMode @default(STANDARD)
 
   // Relations
-  intakeSubmissions IntakeSubmission[]
-  plans             Plan[]
-  trackerTemplates  TrackerTemplate[]
-  dailyCheckIns     DailyCheckIn[]
-  weeklyReviews     WeeklyReview[]
+  intakeSubmissions    IntakeSubmission[]
+  plans                Plan[]
+  trackerTemplates     TrackerTemplate[]
+  dailyCheckIns        DailyCheckIn[]
+  weeklyReviews        WeeklyReview[]
+  wearableConnections  WearableConnection[]
+  wearableData         WearableData[]
 
   // NextAuth
   accounts      Account[]
@@ -114,6 +117,8 @@ model IntakeSubmission {
   status      IntakeStatus @default(IN_PROGRESS)
   currentSection Int       @default(0)
   submittedAt DateTime?
+  summary     Json?
+  redFlags    Json?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -227,4 +232,45 @@ model WeeklyReview {
   updatedAt      DateTime     @updatedAt
 
   @@unique([clientId, weekStartDate])
+}
+
+// ─── Wearable Integration (Phase 7) ──────────────────────────
+
+enum WearableProvider {
+  FITBIT
+  GOOGLE_FIT
+}
+
+model WearableConnection {
+  id            String            @id @default(cuid())
+  clientId      String
+  client        User              @relation(fields: [clientId], references: [id])
+  provider      WearableProvider
+  accessToken   String
+  refreshToken  String?
+  expiresAt     DateTime?
+  scope         String?
+  providerUserId String?
+  isActive      Boolean           @default(true)
+  lastSyncAt    DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([clientId, provider])
+}
+
+model WearableData {
+  id            String            @id @default(cuid())
+  clientId      String
+  client        User              @relation(fields: [clientId], references: [id])
+  provider      WearableProvider
+  date          DateTime          @db.Date
+  dataType      String            // "steps", "sleep", "heart_rate", "active_minutes"
+  value         Float
+  unit          String?           // "steps", "minutes", "bpm"
+  rawData       Json?             // full API response for debugging
+  createdAt     DateTime          @default(now())
+
+  @@unique([clientId, provider, date, dataType])
+  @@index([clientId, date])
 }
