@@ -3,8 +3,9 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
+import ClientDashboard from "@/components/dashboard/ClientDashboard";
 
-export default async function ClientDashboard() {
+export default async function ClientDashboardPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "CLIENT") redirect("/");
 
@@ -14,6 +15,62 @@ export default async function ClientDashboard() {
   });
 
   const intakeComplete = submission?.status === "COMPLETE";
+
+  // Check for delivered plan
+  const plan = intakeComplete
+    ? await prisma.plan.findFirst({
+        where: {
+          clientId: session.user.id,
+          status: { in: ["APPROVED", "DELIVERED"] },
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : null;
+
+  // Check for tracker template (means plan was approved and tracker is ready)
+  const trackerTemplate = plan
+    ? await prisma.trackerTemplate.findFirst({
+        where: { clientId: session.user.id },
+        orderBy: { createdAt: "desc" },
+      })
+    : null;
+
+  // Server-side initial data for fast first render
+  let hasCheckedInToday = false;
+  let checkedInDates: string[] = [];
+  let hasWeeklyReview = false;
+
+  if (trackerTemplate) {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    const recentCheckIns = await prisma.dailyCheckIn.findMany({
+      where: {
+        clientId: session.user.id,
+        date: {
+          gte: new Date(
+            sevenDaysAgo.toISOString().split("T")[0] + "T00:00:00.000Z"
+          ),
+          lte: new Date(todayStr + "T23:59:59.999Z"),
+        },
+      },
+      select: { date: true },
+    });
+
+    checkedInDates = recentCheckIns.map(
+      (c) => c.date.toISOString().split("T")[0]
+    );
+    hasCheckedInToday = checkedInDates.includes(todayStr);
+
+    const latestReview = await prisma.weeklyReview.findFirst({
+      where: { clientId: session.user.id, status: "DELIVERED" },
+      orderBy: { weekStartDate: "desc" },
+      select: { id: true },
+    });
+    hasWeeklyReview = !!latestReview;
+  }
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -50,17 +107,37 @@ export default async function ClientDashboard() {
               {submission ? "Continue Intake" : "Start Intake"}
             </Link>
           </div>
+        ) : !plan ? (
+          <div className="bg-white rounded-lg border border-stone-200 p-6">
+            <h2 className="text-lg font-semibold text-stone-900 mb-2">
+              Intake Complete
+            </h2>
+            <p className="text-stone-600 text-sm">
+              Your coach is reviewing your responses and working on your
+              personalized plan. You&apos;ll be notified when it&apos;s ready.
+            </p>
+          </div>
+        ) : trackerTemplate ? (
+          <ClientDashboard
+            initialCheckedInToday={hasCheckedInToday}
+            initialCheckedInDates={checkedInDates}
+            initialHasWeeklyReview={hasWeeklyReview}
+          />
         ) : (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg border border-stone-200 p-6">
-              <h2 className="text-lg font-semibold text-stone-900 mb-2">
-                Intake Complete
-              </h2>
-              <p className="text-stone-600 text-sm">
-                Your coach is reviewing your responses and working on your
-                personalized plan. You'll be notified when it's ready.
-              </p>
-            </div>
+          <div className="bg-white rounded-lg border border-stone-200 p-6">
+            <h2 className="text-lg font-semibold text-stone-900 mb-2">
+              Your Plan
+            </h2>
+            <p className="text-stone-600 text-sm mb-4">
+              Your coach has prepared a personalized plan based on your intake
+              responses.
+            </p>
+            <Link
+              href="/client/plan"
+              className="inline-block px-4 py-2 border border-stone-300 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-100 transition-colors"
+            >
+              View Your Plan
+            </Link>
           </div>
         )}
       </div>
