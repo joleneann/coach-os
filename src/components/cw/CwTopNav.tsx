@@ -57,14 +57,14 @@ export default function CwTopNav({ activeOverride, coachName = "Jolene" }: Props
           </span>
         </Link>
 
-        <nav className="flex items-center gap-3.5 md:gap-5">
+        <nav className="flex items-center gap-5 md:gap-7 self-stretch">
           {items.map((i) => {
             const isActive = i.id === active;
             return (
               <Link
                 key={i.id}
                 href={i.href}
-                className="flex flex-col items-center gap-1.5 group"
+                className="relative inline-flex items-center h-full group"
               >
                 <span
                   className={
@@ -77,8 +77,9 @@ export default function CwTopNav({ activeOverride, coachName = "Jolene" }: Props
                   {i.label}
                 </span>
                 <span
+                  aria-hidden="true"
                   className={
-                    "h-[2px] w-[18px] rounded-sm " +
+                    "absolute left-1/2 -translate-x-1/2 bottom-3 h-[2px] w-[18px] rounded-sm pointer-events-none " +
                     (isActive ? "bg-ink" : "bg-transparent")
                   }
                 />
