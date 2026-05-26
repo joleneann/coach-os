@@ -1,50 +1,107 @@
 @import "tailwindcss";
 
-/* Coach OS design tokens.
+/* Coach OS design tokens · ported from docs/design/design_files/tokens.jsx.
  *
- * Surface = stone (warm grey). Accent = amber. Never red/green.
- * Light mode only. Auto dark inversion is deliberately disabled until
- * dark mode can be warm-tuned.
+ * Surfaces are warm (paper, card, sunk). Accent is amber. Never red/green.
+ * Light mode only. Dark mode is reserved (sepia, not slate) but not active.
  */
 
-:root {
-  --background: #fafaf9;       /* stone-50, the canvas */
-  --surface: #ffffff;          /* card backgrounds */
-  --border: #e7e5e4;           /* stone-200 */
-  --border-strong: #d6d3d1;    /* stone-300 */
+@theme {
+  /* Surfaces */
+  --color-paper: #fbfaf7;
+  --color-card: #ffffff;
+  --color-sunk: #f5f4f0;
+  --color-sunk-2: #efece6;
 
-  --text: #1c1917;             /* stone-900 */
-  --text-muted: #57534e;       /* stone-600 */
-  --text-subtle: #a8a29e;      /* stone-400 */
+  /* Text */
+  --color-ink: #1c1917;
+  --color-ink-2: #44403c;
+  --color-quiet: #78716c;
+  --color-hush: #a8a29e;
 
-  --accent: #d97706;           /* amber-600, primary action */
-  --accent-soft: #fef3c7;      /* amber-100, soft fills */
-  --accent-strong: #b45309;    /* amber-700, attention without alarm */
+  /* Lines */
+  --color-line: #e7e5e4;
+  --color-line-strong: #d6d3d1;
 
-  --foreground: var(--text);
-}
+  /* Accent */
+  --color-amber: #d97706;
+  --color-amber-ink: #92400e;
+  --color-amber-soft: #fef3c7;
+  --color-amber-wash: #fdf6e3;
+  --color-attention: #b45309;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-border: var(--border);
-  --color-border-strong: var(--border-strong);
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-text-subtle: var(--text-subtle);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-strong: var(--accent-strong);
+  /* Type scale · Inter · pairs size with line-height and letter-spacing.
+   * Use as Tailwind utilities: text-display, text-h1, text-body, text-read etc. */
+  --text-display: 32px;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 500;
+
+  --text-h1: 24px;
+  --text-h1--line-height: 1.2;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 500;
+
+  --text-h2: 19px;
+  --text-h2--line-height: 1.3;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 500;
+
+  --text-h3: 16px;
+  --text-h3--line-height: 1.4;
+  --text-h3--letter-spacing: -0.005em;
+  --text-h3--font-weight: 600;
+
+  --text-body: 15px;
+  --text-body--line-height: 1.55;
+
+  --text-body-2: 14px;
+  --text-body-2--line-height: 1.55;
+
+  --text-meta: 12px;
+  --text-meta--line-height: 1.4;
+  --text-meta--font-weight: 500;
+
+  --text-micro: 11px;
+  --text-micro--line-height: 1.3;
+  --text-micro--letter-spacing: 0.08em;
+  --text-micro--font-weight: 500;
+
+  --text-read: 16px;
+  --text-read--line-height: 1.7;
+
+  --text-read-lead: 19px;
+  --text-read-lead--line-height: 1.55;
+  --text-read-lead--letter-spacing: -0.005em;
+
+  /* Radii */
+  --radius-chip: 6px;
+  --radius-card-sm: 14px;
+  --radius-card: 16px;
+  --radius-card-lg: 18px;
+  --radius-paper: 20px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Force Inter on all elements — override any Tailwind font-sans defaults */
+/* Inter on everything — override any framework defaults */
 *, *::before, *::after {
   font-family: inherit;
+}
+
+/* Respect reduced motion preference across the whole app */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Micro utility: UPPERCASE class for the micro type token */
+.text-micro {
+  text-transform: uppercase;
 }
