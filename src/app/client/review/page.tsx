@@ -2,137 +2,212 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import LogoutButton from "@/components/LogoutButton";
-import WeeklyReviewCard from "@/components/WeeklyReviewCard";
+
+import { CwShell, CwContainer } from "@/components/cw";
+import { CosMeta, CosRule, CosWeekDots, CosTag, ArrowIcon, CheckIcon, QuoteIcon } from "@/components/cos";
+import { Button } from "@/components/ui/button";
 import { formatWeekRange, getWeekEndDate } from "@/lib/weekly-review";
 
 /**
- * Client Review Page
+ * Client Weekly Review · long-form reading.
  *
- * Shows the latest DELIVERED weekly review.
- * Simple, warm, read-only. The coach's letter to the client.
+ * Ports docs/design/design_files/client-web.jsx · ClientWebReview.
+ * Reading column max 760px. Coach paragraph sits on amberWash with the
+ * J avatar, "YOUR COACH'S READ" eyebrow in amberInk. The suggested
+ * adjustment card uses the outline → soft tag transition.
  */
 export default async function ClientReviewPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "CLIENT") redirect("/");
 
-  // Fetch the latest delivered review
+  const clientId = session.user.id;
+
   const review = await prisma.weeklyReview.findFirst({
-    where: {
-      clientId: session.user.id,
-      status: "DELIVERED",
-    },
+    where: { clientId, status: "DELIVERED" },
     orderBy: { weekStartDate: "desc" },
   });
 
-  // Fetch all delivered reviews for the list
-  const allReviews = await prisma.weeklyReview.findMany({
-    where: {
-      clientId: session.user.id,
-      status: "DELIVERED",
-    },
-    select: { id: true, weekStartDate: true, deliveredAt: true },
-    orderBy: { weekStartDate: "desc" },
-  });
+  if (!review) {
+    return (
+      <CwShell activeOverride="week">
+        <CwContainer max={760} className="py-14">
+          <CosMeta>YOUR WEEK</CosMeta>
+          <h1
+            className="text-ink font-medium tracking-tight mt-2"
+            style={{ fontSize: 40, lineHeight: 1.1 }}
+          >
+            Your first review is coming.
+          </h1>
+          <p className="text-read-lead text-ink-2 mt-5">
+            Keep checking in. Once you have a full week, Jolene will send a
+            written reflection here.
+          </p>
+          <Button variant="neutral" size="md" className="mt-8" asChild>
+            <Link href="/client">Back to today</Link>
+          </Button>
+        </CwContainer>
+      </CwShell>
+    );
+  }
 
-  const weekStart = review
-    ? review.weekStartDate.toISOString().split("T")[0]
-    : null;
-  const weekEnd = weekStart ? getWeekEndDate(weekStart) : null;
-  const weekLabel =
-    weekStart && weekEnd ? formatWeekRange(weekStart, weekEnd) : "";
+  const start = review.weekStartDate.toISOString().split("T")[0];
+  const end = getWeekEndDate(start);
+  const weekLabel = formatWeekRange(start, end);
+  const weekNumber = (() => {
+    // ISO-ish week number using year base
+    const first = new Date(review.weekStartDate.getFullYear(), 0, 1);
+    const diff = Math.floor(
+      (review.weekStartDate.getTime() - first.getTime()) / 86400000
+    );
+    return Math.floor(diff / 7) + 1;
+  })();
+
+  // Pull the coach paragraph and the suggested-adjustment snippet from synthesisData
+  const data = review.synthesisData as
+    | { sections?: { title: string; content: string }[] }
+    | null;
+  const coachSection = data?.sections?.find((s) =>
+    s.title.toLowerCase().includes("coach")
+  );
+  const adjustmentSection = data?.sections?.find((s) =>
+    s.title.toLowerCase().includes("adjust") ||
+    s.title.toLowerCase().includes("habit") ||
+    s.title.toLowerCase().includes("graduat")
+  );
+  const yourWeekSection = data?.sections?.find((s) =>
+    s.title.toLowerCase().includes("week") ||
+    s.title.toLowerCase().includes("your")
+  );
+  const coachParas = (coachSection?.content ?? review.coachFeedback ?? "")
+    .split(/\n\n+/)
+    .filter((p) => p.trim().length > 0);
+  const coachLead = coachParas[0] ?? "";
+  const coachRest = coachParas.slice(1).join(" ").trim();
+
+  // Dots for that week
+  const ws = new Date(start + "T00:00:00.000Z");
+  const checkIns = await prisma.dailyCheckIn.findMany({
+    where: {
+      clientId,
+      date: {
+        gte: ws,
+        lte: new Date(end + "T23:59:59.999Z"),
+      },
+    },
+    select: { date: true },
+  });
+  const dots: number[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws);
+    d.setDate(d.getDate() + i);
+    const iso = d.toISOString().split("T")[0];
+    dots.push(checkIns.some((c) => c.date.toISOString().split("T")[0] === iso) ? 1 : 0);
+  }
+  const presentCount = dots.filter(Boolean).length;
+
+  const deliveredLabel = review.deliveredAt
+    ? `published ${new Date(review.deliveredAt).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      }).toLowerCase()}`
+    : "";
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/client"
-              className="text-stone-400 hover:text-stone-600 text-sm"
-            >
-              &larr; Dashboard
-            </Link>
-            <h1 className="text-lg font-semibold text-stone-900">
-              Your Week in Review
-            </h1>
+    <CwShell activeOverride="week">
+      <CwContainer max={760} className="py-14">
+        <CosMeta>WEEK {weekNumber} REVIEW</CosMeta>
+        <h1
+          className="text-ink font-medium tracking-tight mt-2"
+          style={{ fontSize: 42, lineHeight: 1.1 }}
+        >
+          Friday&apos;s reflection
+        </h1>
+        <p className="text-meta text-quiet mt-1.5">
+          {weekLabel}
+          {deliveredLabel && ` · ${deliveredLabel}`}
+        </p>
+
+        {/* Your week */}
+        <div className="mt-8">
+          <CosMeta>YOUR WEEK</CosMeta>
+          <div className="mt-3 flex items-center gap-4.5 flex-wrap">
+            <CosWeekDots data={dots} size={11} gap={10} />
+            <p className="text-body-2 text-quiet">
+              {yourWeekSection?.content?.split(/[.\n]/)[0]?.trim() ||
+                `${presentCount} of 7 days with movement.`}
+            </p>
           </div>
-          <LogoutButton />
         </div>
-      </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-10">
-        {review && weekStart ? (
-          <div className="space-y-8">
-            <WeeklyReviewCard
-              review={{
-                id: review.id,
-                weekStartDate: weekStart,
-                status: review.status,
-                synthesisData: review.synthesisData as {
-                  sections?: { title: string; content: string }[];
-                } | null,
-                coachFeedback: review.coachFeedback,
-                approvedAt: review.approvedAt?.toISOString() || null,
-                deliveredAt: review.deliveredAt?.toISOString() || null,
-              }}
-              weekLabel={weekLabel}
-              mode="client"
-            />
-
-            {/* Past reviews list */}
-            {allReviews.length > 1 && (
+        {/* Coach paragraph · amber wash */}
+        {coachLead && (
+          <div className="mt-8 p-8 rounded-[20px] bg-amber-wash border border-amber-soft">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-full bg-amber-soft text-amber-ink grid place-items-center text-body-2 font-semibold">
+                J
+              </span>
               <div>
-                <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-3">
-                  Previous reviews
-                </h3>
-                <div className="space-y-2">
-                  {allReviews.slice(1).map((pr) => {
-                    const prStart = pr.weekStartDate
-                      .toISOString()
-                      .split("T")[0];
-                    const prEnd = getWeekEndDate(prStart);
-                    const prLabel = formatWeekRange(prStart, prEnd);
-                    return (
-                      <div
-                        key={pr.id}
-                        className="flex items-center justify-between p-3 bg-white border border-stone-200 rounded-lg"
-                      >
-                        <span className="text-sm text-stone-600">
-                          Week of {prLabel}
-                        </span>
-                        <span className="text-xs text-stone-400">
-                          {pr.deliveredAt
-                            ? new Date(pr.deliveredAt).toLocaleDateString(
-                                "en-US",
-                                { month: "short", day: "numeric" }
-                              )
-                            : ""}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="text-body-2 text-ink font-semibold">Jolene</p>
+                <p className="text-micro text-amber-ink mt-0.5">
+                  YOUR COACH&apos;S READ
+                </p>
               </div>
+            </div>
+            <p
+              className="mt-5 text-ink"
+              style={{ fontSize: 22, lineHeight: 1.45, letterSpacing: "-0.005em" }}
+            >
+              {coachLead}
+            </p>
+            {coachRest && (
+              <p
+                className="mt-3.5 text-ink-2"
+                style={{ fontSize: 17, lineHeight: 1.7 }}
+              >
+                {coachRest}
+              </p>
             )}
           </div>
-        ) : (
-          <div className="bg-white rounded-lg border border-stone-200 p-8 text-center">
-            <p className="text-stone-600 text-sm">
-              Your coach will share your first weekly review soon.
-            </p>
-            <p className="text-stone-400 text-xs mt-2">
-              Keep checking in daily. Your review will appear here.
-            </p>
-            <Link
-              href="/client"
-              className="inline-block mt-6 px-4 py-2 border border-stone-300 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-100 transition-colors"
-            >
-              Back to Dashboard
-            </Link>
+        )}
+
+        {/* Suggested adjustment */}
+        {adjustmentSection?.content && (
+          <div className="mt-9">
+            <CosMeta>SUGGESTED ADJUSTMENT</CosMeta>
+            <div className="mt-3 p-5 rounded-2xl bg-card border border-line">
+              <p
+                className="text-ink font-medium"
+                style={{ fontSize: 16, lineHeight: 1.4 }}
+              >
+                {adjustmentSection.content.split(/[.\n]/)[0]?.trim() || "Adjustment to consider."}
+              </p>
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <CosTag tone="outline">current</CosTag>
+                <ArrowIcon size={14} />
+                <CosTag tone="soft">proposed</CosTag>
+              </div>
+              {adjustmentSection.content.split(/\n\n+/).slice(1, 2).map((p, i) => (
+                <p key={i} className="mt-3 text-body-2 text-quiet">
+                  {p.trim()}
+                </p>
+              ))}
+            </div>
           </div>
         )}
-      </div>
-    </div>
+
+        <CosRule className="mt-10" />
+
+        <div className="mt-8 mb-2 flex gap-3 justify-end">
+          <Button variant="neutral" size="md">
+            <QuoteIcon size={14} />
+            Reply to Jolene
+          </Button>
+          <Button variant="accent" size="md">
+            <CheckIcon size={14} />
+            Acknowledge
+          </Button>
+        </div>
+      </CwContainer>
+    </CwShell>
   );
 }

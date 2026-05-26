@@ -1,128 +1,167 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import LogoutButton from "@/components/LogoutButton";
-import PlanContent from "@/components/PlanContent";
 
-interface PlanSection {
-  id: string;
-  sectionType: string;
-  content: string;
-  order: number;
-}
+import { CwShell, CwContainer } from "@/components/cw";
+import { CosMeta, CosRule, CalIcon } from "@/components/cos";
+import { Button } from "@/components/ui/button";
+
+/**
+ * Client Plan · long-form magazine read.
+ *
+ * Ports docs/design/design_files/client-web.jsx · ClientWebPlan.
+ * Centered reading column at ~720px max width, generous vertical rhythm,
+ * sections separated by hairline rules with h2 titles in medium weight.
+ * Footer has a Next Review block.
+ */
 
 const sectionTitles: Record<string, string> = {
-  summary_card: "Summary Card",
-  coaching_cycle: "Your Coaching Cycle",
-  starting_point: "Your Starting Point",
-  behavior_ecosystem: "Your Behavior Ecosystem",
+  summary_card: "Summary",
+  coaching_cycle: "Your coaching cycle",
+  starting_point: "Your starting point",
+  behavior_ecosystem: "Your behavior ecosystem",
   nutrition: "Nutrition",
   exercise: "Exercise",
-  lifestyle: "Lifestyle & Environment",
-  mental_health: "Stress & Mental Health",
-  blood_report: "Blood Report",
-  gut_health: "Gut Health",
+  lifestyle: "Lifestyle and environment",
+  mental_health: "Stress and mental health",
+  blood_report: "Blood report",
+  gut_health: "Gut health",
   supplementation: "Supplementation",
   referrals: "Referrals",
-  what_happens_next: "What Happens Next",
+  what_happens_next: "What happens next",
 };
 
-export default function ClientPlanPage() {
-  const { data: session } = useSession();
-  const [loading, setLoading] = useState(true);
-  const [sections, setSections] = useState<PlanSection[]>([]);
-  const [planExists, setPlanExists] = useState(false);
+export default async function ClientPlanPage() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "CLIENT") redirect("/");
 
-  useEffect(() => {
-    async function load() {
-      if (!session?.user?.id) return;
-      try {
-        const res = await fetch(
-          `/api/plan/view?clientId=${session.user.id}`
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.planId) {
-          setPlanExists(true);
-          setSections(data.sections || []);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [session?.user?.id]);
+  const plan = await prisma.plan.findFirst({
+    where: {
+      clientId: session.user.id,
+      status: { in: ["APPROVED", "DELIVERED"] },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      sections: { orderBy: { order: "asc" } },
+    },
+  });
 
-  if (loading) {
+  // Next Friday at 4pm
+  const today = new Date();
+  const friday = new Date(today);
+  const daysToFri = (5 - friday.getDay() + 7) % 7 || 7;
+  friday.setDate(friday.getDate() + daysToFri);
+  const fridayLabel = friday.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+
+  const draftedLabel = plan?.createdAt
+    ? `DRAFTED BY JOLENE · ${plan.createdAt
+        .toLocaleDateString("en-US", { month: "long", day: "numeric" })
+        .toUpperCase()}`
+    : null;
+
+  if (!plan) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <p className="text-stone-500">Loading your plan...</p>
-      </div>
+      <CwShell activeOverride="plan">
+        <CwContainer max={720} className="py-14">
+          <CosMeta>YOUR PLAN</CosMeta>
+          <h1
+            className="text-ink font-medium tracking-tight mt-2"
+            style={{ fontSize: 40, lineHeight: 1.1 }}
+          >
+            Being written.
+          </h1>
+          <p className="text-read-lead text-ink-2 mt-5">
+            Your coach is reading through your intake. Your plan will appear
+            here once it&apos;s ready.
+          </p>
+          <Button variant="neutral" size="md" className="mt-8" asChild>
+            <Link href="/client">Back to today</Link>
+          </Button>
+        </CwContainer>
+      </CwShell>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/client"
-              className="text-stone-400 hover:text-stone-600 text-sm"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="text-lg font-semibold text-stone-900">
-              Your Plan
-            </h1>
-          </div>
-          <LogoutButton />
-        </div>
-      </header>
+  const summarySection = plan.sections.find(
+    (s) => s.sectionType === "summary_card"
+  );
+  const otherSections = plan.sections.filter(
+    (s) => s.sectionType !== "summary_card"
+  );
 
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        {!planExists ? (
-          <div className="text-center py-16">
-            <p className="text-stone-500 mb-2">
-              Your plan is being prepared by your coach.
-            </p>
-            <p className="text-stone-400 text-sm">
-              You&apos;ll be notified when it&apos;s ready to view.
-            </p>
-            <Link
-              href="/client"
-              className="inline-block mt-6 px-4 py-2 text-sm border border-stone-300 rounded-lg hover:bg-stone-100"
-            >
-              Back to Dashboard
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {sections
-              .sort((a, b) => a.order - b.order)
-              .map((section) => (
-                <div
-                  key={section.id}
-                  className="bg-white border border-stone-200 rounded-lg"
-                >
-                  <div className="px-6 py-4 border-b border-stone-100">
-                    <h2 className="text-sm font-semibold text-stone-900">
-                      {sectionTitles[section.sectionType] ||
-                        section.sectionType}
-                    </h2>
-                  </div>
-                  <div className="px-6 py-4">
-                    <PlanContent content={section.content} />
-                  </div>
-                </div>
+  return (
+    <CwShell activeOverride="plan">
+      <CwContainer max={720} className="py-14">
+        {draftedLabel && <CosMeta>{draftedLabel}</CosMeta>}
+        <h1
+          className="text-ink font-medium tracking-tight mt-2.5"
+          style={{ fontSize: 48, lineHeight: 1.1 }}
+        >
+          {plan.title || "Your plan"}
+        </h1>
+
+        {summarySection?.content && (
+          <div
+            className="text-ink-2 mt-4"
+            style={{
+              fontSize: 21,
+              lineHeight: 1.55,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            {summarySection.content
+              .split(/\n\n+/)
+              .slice(0, 1)
+              .map((p, i) => (
+                <p key={i}>{p.trim()}</p>
               ))}
           </div>
         )}
-      </div>
-    </div>
+
+        {otherSections.map((section) => (
+          <section key={section.id} className="mt-8">
+            <CosRule />
+            <h2 className="text-h2 text-ink font-medium mt-7">
+              {sectionTitles[section.sectionType] ?? section.sectionType}
+            </h2>
+            <div className="mt-3.5 grid gap-4">
+              {section.content
+                .split(/\n\n+/)
+                .filter((p) => p.trim().length > 0)
+                .map((p, i) => (
+                  <p
+                    key={i}
+                    className="text-ink-2"
+                    style={{
+                      fontSize: 17,
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {p.trim()}
+                  </p>
+                ))}
+            </div>
+          </section>
+        ))}
+
+        <div className="mt-9 mb-4 p-5 rounded-2xl bg-sunk border border-line flex items-center justify-between gap-4">
+          <div>
+            <CosMeta>NEXT REVIEW</CosMeta>
+            <p className="text-body font-medium text-ink mt-1.5">
+              {fridayLabel} · together at 4pm
+            </p>
+          </div>
+          <Button variant="neutral" size="md">
+            <CalIcon size={14} />
+            Add to calendar
+          </Button>
+        </div>
+      </CwContainer>
+    </CwShell>
   );
 }
