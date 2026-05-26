@@ -4,9 +4,10 @@
 // Import as:
 //   import { CosButton, CosWeekDots, CosTag } from "@/components/cos";
 
-export { default as CosButton } from "./CosButton";
 export { default as CosMeta } from "./CosMeta";
 export { default as CosRule } from "./CosRule";
 export { default as CosTag } from "./CosTag";
 export { default as CosWeekDots } from "./CosWeekDots";
 export { default as CosWeekLabels } from "./CosWeekLabels";
+export { default as CkBreathPulse } from "./CkBreathPulse";
+export * from "./CosIcon";

@@ -20,6 +20,12 @@ The product is being built by a practicing coach (Jolene). The aesthetic must re
 5. **No clinical or KPI-dashboard feel.** This is not a fitness tracker. Avoid large numeric readouts, gauges, ring charts, or anything that turns wellness into a score.
 6. **Architecture is locked.** Do not restructure routes, rename API endpoints, change Prisma schema, or touch auth flow. UI/UX/CSS/component composition only.
 
+## Responsive policy
+
+- **Client surfaces** (`/auth/login`, `/intake`, `/client/*`): must work on desktop AND mobile. Mobile is the primary surface because clients log in from their phones for daily check-ins. Design for ~390px first, scale up.
+- **Coach surfaces** (`/coach/*`): desktop only. Coaches work on laptops. Optimize for ~1280px+ readability and information density. Do not spend effort on mobile breakpoints for coach views.
+- **Shared surfaces** (`/auth/login`): treat as client-priority — must be mobile-responsive.
+
 ## Design philosophy
 
 - **No shame, no blame.** Microcopy should never imply the client failed. "Tell us about today" beats "Did you complete your habits?"
@@ -96,22 +102,22 @@ npm run dev
 
 The app runs at `http://localhost:3000`. If `.env` is missing, copy `.env.example` and ask the user to populate `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, and `GROQ_API_KEY` — the app will not boot without them.
 
-Then walk through these surfaces in order, capturing a screenshot of each (desktop ~1440px and mobile ~390px). Log in fresh for each role:
+Then walk through these surfaces in order, capturing screenshots. Log in fresh for each role. **Capture mobile (~390px) for every client and shared surface; coach surfaces desktop only (~1280px+).**
 
-**As coach (coach@test.dev / coach123):**
+**As coach (coach@test.dev / coach123) — desktop only:**
 1. `/coach` — client list
 2. `/coach/clients/<rohan-id>` — client detail with intake summary
 3. `/coach/clients/<rohan-id>/plan` — plan decisions and draft review
 4. Weekly review approval surface (linked from the client detail)
 
-**As client (rohan@test.dev / client123 — only ACTIVE client with real data):**
+**As client (rohan@test.dev / client123 — only ACTIVE client with real data) — desktop + mobile:**
 5. `/client` — landing / Today
 6. `/client/dashboard` — tabbed Today/Progress/Reviews/Plan
 7. `/client/checkin` — daily check-in with voice recorder
 8. `/client/plan` — plan view
 9. `/client/review` — most recent weekly review
 
-**Unauthenticated:**
+**Unauthenticated — desktop + mobile:**
 10. `/auth/login`
 11. `/intake` (use a fresh INTAKE client: priya@test.dev / client123) — at minimum capture section 1, the GHQ-28 section, and a narrative section with voice input visible
 
