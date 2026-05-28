@@ -7,12 +7,11 @@ import { useSession } from "next-auth/react";
 const items = [
   { id: "today", label: "Today", href: "/client" },
   { id: "plan", label: "Plan", href: "/client/plan" },
-  { id: "week", label: "Week", href: "/client/review" },
-  { id: "history", label: "History", href: "/client/history" },
+  { id: "progress", label: "Progress", href: "/client/progress" },
 ];
 
 interface Props {
-  activeOverride?: "today" | "plan" | "week" | "history";
+  activeOverride?: "today" | "plan" | "progress";
   coachName?: string;
 }
 
@@ -33,10 +32,10 @@ export default function CwTopNav({ activeOverride, coachName = "Jolene" }: Props
     activeOverride ??
     (pathname.startsWith("/client/plan")
       ? "plan"
-      : pathname.startsWith("/client/review")
-      ? "week"
-      : pathname.startsWith("/client/history")
-      ? "history"
+      : pathname.startsWith("/client/progress") ||
+        pathname.startsWith("/client/review") ||
+        pathname.startsWith("/client/history")
+      ? "progress"
       : "today");
 
   const initial =
@@ -48,7 +47,7 @@ export default function CwTopNav({ activeOverride, coachName = "Jolene" }: Props
   });
 
   return (
-    <header className="h-16 shrink-0 px-6 md:px-10 border-b border-line bg-paper flex items-center justify-between">
+    <header className="h-16 shrink-0 px-6 md:px-10 border-b border-line bg-paper hidden md:flex items-center justify-between">
       <div className="flex items-center gap-5 md:gap-9">
         <Link href="/client" className="flex items-center gap-2.5">
           <span className="w-[22px] h-[22px] rounded-full bg-ink inline-block" />
